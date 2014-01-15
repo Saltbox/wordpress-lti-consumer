@@ -3,6 +3,8 @@
 An LTI-compatible launching plugin for Wordpress.
 
 
+General Wordpress plugin installation instructions can be found here: http://codex.wordpress.org/Managing_Plugins#Automatic_Plugin_Installation
+
 
 After installing the plugin, add content launching with the [lti-launch]
 shortcode.
