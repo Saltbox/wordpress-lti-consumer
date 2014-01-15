@@ -61,5 +61,5 @@ disabled, OAuth secret keys will become visible if this plugin is disabled.
 
 
 Copyright (c) 2014 Saltbox Services.
-Licensed under the GPLv3. See the LICENSE file for details.
+Licensed under the GPLv3. See the LICENSE.md file for details.
 
