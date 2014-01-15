@@ -21,13 +21,12 @@ add_action('wp_enqueue_scripts', 'add_launch_script_func');
 
 
 function lti_launch_func($attrs) {
-    $html = '';
-        
     $data = lti_launch_process($attrs);
 
     if ( array_key_exists('error', $data) ) {
-        $html = '<div class="error"><p><strong>$data[error]</strong></p></div>';
+        $html = '<div class="error"><p><strong>' . $data['error'] . '</strong></p></div>';
     } else {
+        $html = '';
         $id = uniqid();
         $iframeId = uniqid();
 
