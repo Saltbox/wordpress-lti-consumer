@@ -1,5 +1,4 @@
 
-
 An LTI-compatible launching plugin for Wordpress.
 
 
@@ -12,27 +11,13 @@ shortcode.
 
 Some examples::
 
-  [lti-launch consumer_key=yourconsumerkey
-              secret_key=yoursecretkey
-              display=iframe
-              configuration_url=http://launcher.saltbox.com/lms/configuration
-              resource_link_id=testcourseplacement1]
+  [lti-launch consumer_key=yourconsumerkey secret_key=yoursecretkey display=iframe configuration_url=http://launcher.saltbox.com/lms/configuration resource_link_id=testcourseplacement1]
   
   
-  [lti-launch consumer_key=yourconsumerkey
-              secret_key=yoursecretkey
-              display=newwindow
-              action=link
-              configuration_url=http://launcher.saltbox.com/lms/configuration
-              resource_link_id=testcourseplacement1]
+  [lti-launch consumer_key=yourconsumerkey secret_key=yoursecretkey display=newwindow action=link configuration_url=http://launcher.saltbox.com/lms/configuration resource_link_id=testcourseplacement1]
   
   
-  [lti-launch consumer_key=yourconsumerkey
-              secret_key=yoursecretkey
-              display=self
-              action=button
-              launch_url=http://launcher.saltbox.com/launch
-              resource_link_id=testcourseplacement1]
+  [lti-launch consumer_key=yourconsumerke secret_key=yoursecretkey display=self action=button launch_url=http://launcher.saltbox.com/launch resource_link_id=testcourseplacement1]
 
 
 Options:
