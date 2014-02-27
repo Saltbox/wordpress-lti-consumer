@@ -3,7 +3,7 @@
  * Plugin Name: LTI-compatible consumer
  * Plugin URI: 
  * Description: An LTI-compatible launching plugin for Wordpress.
- * Version: 0.1.20
+ * Version: 0.2.9
  * Author: John Weaver <john.weaver@saltbox.com>
  * License: GPLv3
  */
@@ -12,14 +12,190 @@
 require('OAuth.php');
 
 
-// Hook up callbacks
+/*
+ * Create the lti_launch custom post type.
+ */
+add_action('init', 'create_lti_post_type_func');
+function create_lti_post_type_func() {
+    register_post_type(
+        'lti_launch',
+        array(
+            'labels' => array(
+                'name' => __('LTI-launchable content'),
+                'singular_name' => __('LTI-launchable content'),
+                'add_new_item' => __('Add new LTI launcher'),
+                'edit_item' => __('Edit LTI launcher'),
+                'new_item' => __('New LTI launcher'),
+                'view_item' => __('View LTI launcher'),
+                'search_items' => __('Search LTI launchers'),
+                'not_found' => __('No LTI launchers found'),
+                'not_found_in_trash' => __('No LTI launchers found in Trash'),
+            ),
+            'description' => __('An LTI-compatible tool or content launch'),
+            'publicly_queryable' => false,
+            'public' => true,
+            'has_archive' => true,
+            'supports' => array(
+                'title',
+            ),
+        )
+    );
+}
+
+add_filter('post_row_actions', 'add_shortcode_generator_link', 10, 2);
+function add_shortcode_generator_link($actions, $post) {
+    if ( $post->post_type == 'lti_launch' ) {
+        unset($actions['view']);
+        $actions['shortcode_generator'] = 'Shortcode: [lti-launch id=' . $post->post_name . ']';
+    }
+
+    return $actions;
+}
+
+
+
+add_action('add_meta_boxes', 'lti_content_meta_box');
+function lti_content_meta_box() {
+    add_meta_box(
+        'lti_content_custom_section_id',
+        __('LTI launch settings', 'lti-consumer'),
+        'lti_content_inner_custom_box',
+        'lti_launch'
+    );
+}
+
+
+add_filter('get_sample_permalink_html', 'permalink_removal', 1000, 4);
+function permalink_removal($return, $id, $new_title, $new_slug) {
+    global $post;
+    if ( $post->post_type == 'lti_launch' ) {
+        return '';
+    } else {
+        return $return;
+    }
+}
+
+
+function lti_content_inner_custom_box($lti_content) {
+    wp_nonce_field('lti_content_inner_custom_box', 'lti_content_inner_custom_nonce');
+
+    $consumer_key = get_post_meta($lti_content->ID, '_lti_meta_consumer_key', true);
+    $secret_key = get_post_meta($lti_content->ID, '_lti_meta_secret_key', true);
+    $display = get_post_meta($lti_content->ID, '_lti_meta_display', true);
+    $action = get_post_meta($lti_content->ID, '_lti_meta_action', true);
+    $launch_url = get_post_meta($lti_content->ID, '_lti_meta_launch_url', true);
+    $configuration_url = get_post_meta($lti_content->ID, '_lti_meta_configuration_url', true);
+    $return_url = get_post_meta($lti_content->ID, '_lti_meta_return_url', true);
+
+    echo '<p>All of the following fields are optional, and can be overridden by specifying the corresponding parameters to the lti-launch shortcode.</p>';
+
+
+    echo '<div>';
+    echo '<label for="lti_content_field_">';
+           _e( "OAuth Consumer Key", 'lti-consumer' );
+    echo '</label> ';
+    echo '<input type="text" id="lti_content_field_consumer_key" name="lti_content_field_consumer_key" value="' . esc_attr( $consumer_key ) . '" size="25" />';
+
+    echo '</div><div>';
+
+    echo '<label for="lti_content_field_">';
+           _e( "OAuth Secret Key", 'lti-consumer' );
+    echo '</label> ';
+    echo '<input type="text" id="lti_content_field_secret_key" name="lti_content_field_secret_key" value="' . esc_attr( $secret_key ) . '" size="25" />';
+
+    echo '</div><div>';
+
+    echo '<label for="lti_content_field_display_newwindow">';
+           _e( "Display Style", 'lti-consumer' );
+    echo '</label> ';
+    echo '<label>Open in a new browser window <input type="radio" ' . checked($display, 'newwindow', false) . ' id="lti_content_field_display_newwindow" name="lti_content_field_display" value="newwindow" /></label>';
+    echo '<label>Inline in an iframe <input type="radio" ' . checked($display, 'iframe', false) . ' id="lti_content_field_display_iframe" name="lti_content_field_display" value="iframe" /></label>';
+    echo '<label>Open in the current browser window <input type="radio" ' . checked($display, 'self', false) . ' id="lti_content_field_display_self" name="lti_content_field_display" value="self" /></label>';
+
+    echo '</div><div>';
+
+    echo '<label for="lti_content_field_action_button">';
+           _e( "Launch trigger control", 'lti-consumer' );
+    echo '</label> ';
+    echo '<label>Button <input type="radio" ' . checked($action, 'button', false) . ' id="lti_content_field_action_button" name="lti_content_field_action" value="button" /></label>';
+    echo '<label>Link <input type="radio" ' . checked($action, 'link', false) . ' id="lti_content_field_action_link" name="lti_content_field_action" value="link"  /></label>';
+
+    echo '</div><div>';
+
+    echo '<label for="lti_content_field_launch_url">';
+           _e( "Launch URL", 'lti-consumer' );
+    echo '</label> ';
+    echo '<input type="url" id="lti_content_field_launch_url" name="lti_content_field_launch_url" value="' . esc_attr( $launch_url ) . '" size="35" />';
+
+    echo '</div><div>';
+
+    echo '<label for="lti_content_field_configuration_url">';
+           _e( "Configuration XML URL", 'lti-consumer' );
+    echo '</label> ';
+    echo '<input type="url" id="lti_content_field_configuration_url" name="lti_content_field_configuration_url" value="' . esc_attr( $configuration_url ) . '" size="35" />';
+
+    echo '</div><div>';
+
+    echo '<label for="lti_content_field_return_url">';
+           _e( "Return URL after completion", 'lti-consumer' );
+    echo '</label> ';
+    echo '<input type="url" id="lti_content_field_return_url" name="lti_content_field_return_url" value="' . esc_attr( $return_url ) . '" size="35" />';
+
+    echo '</div>';
+}
+
+
+add_action('save_post', 'lti_content_save_post');
+function lti_content_save_post($post_id) {
+    // From http://codex.wordpress.org/Function_Reference/add_meta_box
+    // Check if our nonce is set.
+    if ( ! isset( $_POST['lti_content_inner_custom_nonce'] ) ) {
+        return $post_id;
+    }
+    
+    $nonce = $_POST['lti_content_inner_custom_nonce'];
+    
+    // Verify that the nonce is valid.
+    if ( ! wp_verify_nonce( $nonce, 'lti_content_inner_custom_box' ) ) {
+          return $post_id;
+    }
+    
+    // If this is an autosave, our form has not been submitted, so we don't want to do anything.
+    if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+        return $post_id;
+    }
+
+    if ( ! current_user_can( 'edit_post', $post_id ) ) {
+        return $post_id;
+    }
+
+    /* OK, its safe for us to save the data now. */
+
+    // Sanitize user input.
+    $consumer_key = sanitize_text_field($_POST['lti_content_field_consumer_key']);
+    $secret_key = sanitize_text_field($_POST['lti_content_field_secret_key']);
+    $display = sanitize_text_field($_POST['lti_content_field_display']);
+    $action = sanitize_text_field($_POST['lti_content_field_action']);
+    $launch_url = sanitize_text_field($_POST['lti_content_field_launch_url']);
+    $configuration_url = sanitize_text_field($_POST['lti_content_field_configuration_url']);
+    $return_url = sanitize_text_field($_POST['lti_content_field_return_url']);
+
+    // Update the meta field in the database.
+    update_post_meta($post_id, '_lti_meta_consumer_key', $consumer_key);
+    update_post_meta($post_id, '_lti_meta_secret_key', $secret_key);
+    update_post_meta($post_id, '_lti_meta_display', $display);
+    update_post_meta($post_id, '_lti_meta_action', $action);
+    update_post_meta($post_id, '_lti_meta_launch_url', $launch_url);
+    update_post_meta($post_id, '_lti_meta_configuration_url', $configuration_url);
+    update_post_meta($post_id, '_lti_meta_return_url', $return_url);
+}
+
+
+
+/*
+ * Add the lti-launch shortcode.
+ */
 add_shortcode('lti-launch', 'lti_launch_func');
-
-add_action('save_post', 'ensure_resource_link_id_func');
-
-add_action('wp_enqueue_scripts', 'add_launch_script_func');
-
-
 function lti_launch_func($attrs) {
     $data = lti_launch_process($attrs);
 
@@ -44,13 +220,17 @@ function lti_launch_func($attrs) {
             $autolaunch = 'no';
         }
 
-        $html .= "<form method=\"post\" action=\"$data[url]\" target=\"$target\" id=\"launch-$id\" data-auto-launch=\"$autolaunch\">";
+        $html .= "<form method=\"post\" action=\"$data[url]\" target=\"$target\" id=\"launch-$id\" data-id=\"$id\" data-post=\"$data[id]\" data-auto-launch=\"$autolaunch\">";
         foreach ( $data['parameters'] as $key => $value ) {
             $html .= "<input type=\"hidden\" name=\"$key\" value=\"$value\">";
         }
 
         if ( $data['display'] == 'iframe' ) {
             $html .= '<iframe style="width: 100%; height: 55em;" class="launch-frame" id="frame-' . $iframeId . '"></iframe>';
+            // Immediately send the lti_launch action when showing the iframe.
+            if ( $data['id'] ) {
+                do_action('lti_launch', $data['id']);
+            }
         } else if ( $data['action'] == 'link' ) {
             $html .= '<a href="#" onclick="lti_consumer_launch(\'' . $id . '\')">Launch</a>';
         } else {
@@ -64,6 +244,36 @@ function lti_launch_func($attrs) {
 }
 
 
+add_action('wp_head', 'pluginname_ajaxurl');
+function pluginname_ajaxurl() {
+?>
+        <script type="text/javascript">
+        var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
+</script>
+<?php
+}
+
+
+/*
+ * Emit an 'lti_launch' action when the Javascript informs us about a
+ * launch.
+ */
+add_action('wp_ajax_lti_launch', 'hook_lti_launch_action_func');
+add_action('wp_ajax_nopriv_lti_launch', 'hook_lti_launch_action_func');
+function hook_lti_launch_action_func() {
+    $lti_launch = get_post($_POST['post']);
+    // make sure that at least the post id is valid
+    if ( $lti_launch && $lti_launch->post_type == 'lti_launch' ) {
+        do_action('lti_launch', $_POST['post']);
+    }
+}
+
+
+/*
+ * Find lti-launch shortcodes in posts and add a resource_link_id to any found
+ * if they don't already have one set.
+ */
+add_action('save_post', 'ensure_resource_link_id_func');
 function ensure_resource_link_id_func($post_id) {
     // get post content
     $content = get_post($post_id)->post_content;
@@ -96,6 +306,10 @@ function ensure_resource_link_id_func($post_id) {
 }
 
 
+/*
+ * Insert our LTI launch script into the page.
+ */
+add_action('wp_enqueue_scripts', 'add_launch_script_func');
 function add_launch_script_func() {
     wp_enqueue_script('lti_launch', plugins_url('scripts/launch.js', __FILE__), array('jquery'));
 }
@@ -123,7 +337,9 @@ function add_resource_link_id_if_not_present($shortcode) {
     return '[' . implode(' ', $pieces) . ']';
 }
 
-
+/*
+ * Utilities
+ */
 function extract_user_id() {
     // Find some relevant information about the current user
     $current_user = wp_get_current_user();
@@ -191,6 +407,29 @@ function lti_launch_process($attrs) {
         // grab site information
         $parameters = array_merge($parameters, extract_site_id());
 
+        $post_id = '';
+
+        if ( array_key_exists('id', $attrs) ) {
+            $posts = get_posts(array(
+                'name' => $attrs['id'],
+                'post_type' => 'lti_launch',
+                'post_status' => 'publish',
+                'posts_per_page' => 1,
+            ));
+
+            if ( $posts ) {
+                $lti_content = $posts[0];
+                $post_id = $lti_content->ID;
+                $consumer_key = get_post_meta($lti_content->ID, '_lti_meta_consumer_key', true);
+                $consumer_secret = get_post_meta($lti_content->ID, '_lti_meta_secret_key', true);
+                $display = get_post_meta($lti_content->ID, '_lti_meta_display', true);
+                $action = get_post_meta($lti_content->ID, '_lti_meta_action', true);
+                $launch_url = get_post_meta($lti_content->ID, '_lti_meta_launch_url', true);
+                $configuration_url = get_post_meta($lti_content->ID, '_lti_meta_configuration_url', true);
+                $return_url = get_post_meta($lti_content->ID, '_lti_meta_return_url', true);
+            }
+        }
+
         // incorporate information from $attrs
         if ( array_key_exists('resource_link_id', $attrs) ) {
             $parameters['resource_link_id'] = $attrs['resource_link_id'];
@@ -200,33 +439,43 @@ function lti_launch_process($attrs) {
 
         if ( array_key_exists('return_url', $attrs) ) {
             $parameters['launch_presentation_return_url'] = $attrs['return_url'];
+        } else if ( isset($return_url) ) {
+            $parameters['launch_presentation_return_url'] = $return_url;
         }
 
         if ( array_key_exists('configuration_url', $attrs) ) {
             $launch_url = determine_launch_url($attrs['configuration_url']);
 
             if ( $launch_url == false ) {
-                return 'Could not determine launch URL.';
+                return array('error' => 'Could not determine launch URL.');
             }
         } else if ( array_key_exists('launch_url', $attrs) ) {
             $launch_url = $attrs['launch_url'];
-        } else {
+        } else if ( isset($configuration_url) ) {
+            $launch_url = determine_launch_url($configuration_url);
+
+            if ( $launch_url == false ) {
+                return array('error' => 'Could not determine launch URL.');
+            }
+        } else if ( !isset($launch_url) ) {
             return array('error' => 'Missing launch URL and URL to configuration XML. One of these is required.');
         }
 
         if ( array_key_exists('consumer_key', $attrs) ) {
             $consumer_key = $attrs['consumer_key'];
-        } else {
+        } else if ( !isset($consumer_key) ) {
             return array('error' => 'Missing OAuth consumer key.');
         }
 
         if ( array_key_exists('secret_key', $attrs) ) {
             $consumer_secret = $attrs['secret_key'];
-        } else {
+        } else if ( !isset($consumer_secret) ) {
             return array('error' => 'Missing OAuth consumer secret.');
         }
 
-        $display = 'newwindow';
+        if ( !isset($display) ) {
+            $display = 'newwindow';
+        }
 
         if ( array_key_exists('display', $attrs) ) {
             $display = $attrs['display'];
@@ -234,7 +483,7 @@ function lti_launch_process($attrs) {
 
         if ( array_key_exists('action', $attrs) ) {
             $action = $attrs['action'];
-        } else {
+        } else if ( !isset($action) )  {
             $action = 'button';
         }
 
@@ -243,6 +492,7 @@ function lti_launch_process($attrs) {
                 $consumer_key, $consumer_secret,
                 $launch_url,
                 $parameters),
+            'id' => $post_id,
             'display' => $display,
             'action' => $action,
             'url' => $launch_url,
