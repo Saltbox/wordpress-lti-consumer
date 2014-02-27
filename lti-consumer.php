@@ -3,7 +3,7 @@
  * Plugin Name: LTI-compatible consumer
  * Plugin URI: 
  * Description: An LTI-compatible launching plugin for Wordpress.
- * Version: 0.2.9
+ * Version: 0.2.10
  * Author: John Weaver <john.weaver@saltbox.com>
  * License: GPLv3
  */
@@ -87,61 +87,59 @@ function lti_content_inner_custom_box($lti_content) {
     $configuration_url = get_post_meta($lti_content->ID, '_lti_meta_configuration_url', true);
     $return_url = get_post_meta($lti_content->ID, '_lti_meta_return_url', true);
 
-    echo '<p>All of the following fields are optional, and can be overridden by specifying the corresponding parameters to the lti-launch shortcode.</p>';
+?>
+    <p>All of the following fields are optional, and can be overridden by specifying the corresponding parameters to the lti-launch shortcode.</p>
 
 
-    echo '<div>';
-    echo '<label for="lti_content_field_">';
-           _e( "OAuth Consumer Key", 'lti-consumer' );
-    echo '</label> ';
-    echo '<input type="text" id="lti_content_field_consumer_key" name="lti_content_field_consumer_key" value="' . esc_attr( $consumer_key ) . '" size="25" />';
+<table class="form-table">
+  <tbody>
+    <tr>
+      <th><label for="lti_content_field_"><?php echo _e( "OAuth Consumer Key", 'lti-consumer' ); ?></label></th>
+      <td><input type="text" id="lti_content_field_consumer_key" name="lti_content_field_consumer_key" value="<?php echo esc_attr( $consumer_key ); ?>" size="25" /></td>
+    </tr>
 
-    echo '</div><div>';
+    <tr>
+      <th><label for="lti_content_field_"><?php echo _e( "OAuth Secret Key", 'lti-consumer' ); ?></label></th>
+      <td><input type="text" id="lti_content_field_secret_key" name="lti_content_field_secret_key" value="<?php esc_attr( $secret_key ); ?>" size="25" /></td>
+    </tr>
 
-    echo '<label for="lti_content_field_">';
-           _e( "OAuth Secret Key", 'lti-consumer' );
-    echo '</label> ';
-    echo '<input type="text" id="lti_content_field_secret_key" name="lti_content_field_secret_key" value="' . esc_attr( $secret_key ) . '" size="25" />';
+    </tr>
 
-    echo '</div><div>';
+    <tr>
+      <th><label for="lti_content_field_display_newwindow"><?php echo _e( "Display Style", 'lti-consumer' ); ?></label></th>
+      <td>
+        <label>Open in a new browser window <input type="radio" <?php checked($display, 'newwindow'); ?> id="lti_content_field_display_newwindow" name="lti_content_field_display" value="newwindow" /></label><br>
+        <label>Inline in an iframe <input type="radio" <?php checked($display, 'iframe'); ?> id="lti_content_field_display_iframe" name="lti_content_field_display" value="iframe" /></label><br>
+        <label>Open in the current browser window <input type="radio" <?php checked($display, 'self'); ?> id="lti_content_field_display_self" name="lti_content_field_display" value="self" /></label>
+      </td>
+    </tr>
 
-    echo '<label for="lti_content_field_display_newwindow">';
-           _e( "Display Style", 'lti-consumer' );
-    echo '</label> ';
-    echo '<label>Open in a new browser window <input type="radio" ' . checked($display, 'newwindow', false) . ' id="lti_content_field_display_newwindow" name="lti_content_field_display" value="newwindow" /></label>';
-    echo '<label>Inline in an iframe <input type="radio" ' . checked($display, 'iframe', false) . ' id="lti_content_field_display_iframe" name="lti_content_field_display" value="iframe" /></label>';
-    echo '<label>Open in the current browser window <input type="radio" ' . checked($display, 'self', false) . ' id="lti_content_field_display_self" name="lti_content_field_display" value="self" /></label>';
+    <tr>
+      <th><label for="lti_content_field_action_button"><?php _e( "Launch trigger control", 'lti-consumer' ); ?></label></th>
+      <td>
+        <label>Button <input type="radio" <?php checked($action, 'button'); ?> id="lti_content_field_action_button" name="lti_content_field_action" value="button" /></label><br>
+        <label>Link <input type="radio" <?php checked($action, 'link'); ?> id="lti_content_field_action_link" name="lti_content_field_action" value="link"  /></label>
+      </td>
+    </tr>
 
-    echo '</div><div>';
+    <tr>
+      <th><label for="lti_content_field_launch_url"><?php echo _e( "Launch URL", 'lti-consumer' ); ?></label></th>
+      <td><input type="url" id="lti_content_field_launch_url" name="lti_content_field_launch_url" value="<?php echo esc_attr( $launch_url ); ?>" size="35" /></td>
+    </tr>
 
-    echo '<label for="lti_content_field_action_button">';
-           _e( "Launch trigger control", 'lti-consumer' );
-    echo '</label> ';
-    echo '<label>Button <input type="radio" ' . checked($action, 'button', false) . ' id="lti_content_field_action_button" name="lti_content_field_action" value="button" /></label>';
-    echo '<label>Link <input type="radio" ' . checked($action, 'link', false) . ' id="lti_content_field_action_link" name="lti_content_field_action" value="link"  /></label>';
+    <tr>
+      <th><label for="lti_content_field_configuration_url"><?php echo _e( "Configuration XML URL", 'lti-consumer' ); ?></label></th>
+      <td><input type="url" id="lti_content_field_configuration_url" name="lti_content_field_configuration_url" value="<?php echo esc_attr( $configuration_url ) ?>" size="35" /></td>
+    </tr>
 
-    echo '</div><div>';
+    <tr>
+      <th><label for="lti_content_field_return_url"><?php echo _e( "Return URL after completion", 'lti-consumer' ); ?></label></th>
+      <td><input type="url" id="lti_content_field_return_url" name="lti_content_field_return_url" value="<?php echo esc_attr( $return_url ); ?>" size="35" /></td>
+    </tr>
+  </tbody>
+</table>
 
-    echo '<label for="lti_content_field_launch_url">';
-           _e( "Launch URL", 'lti-consumer' );
-    echo '</label> ';
-    echo '<input type="url" id="lti_content_field_launch_url" name="lti_content_field_launch_url" value="' . esc_attr( $launch_url ) . '" size="35" />';
-
-    echo '</div><div>';
-
-    echo '<label for="lti_content_field_configuration_url">';
-           _e( "Configuration XML URL", 'lti-consumer' );
-    echo '</label> ';
-    echo '<input type="url" id="lti_content_field_configuration_url" name="lti_content_field_configuration_url" value="' . esc_attr( $configuration_url ) . '" size="35" />';
-
-    echo '</div><div>';
-
-    echo '<label for="lti_content_field_return_url">';
-           _e( "Return URL after completion", 'lti-consumer' );
-    echo '</label> ';
-    echo '<input type="url" id="lti_content_field_return_url" name="lti_content_field_return_url" value="' . esc_attr( $return_url ) . '" size="35" />';
-
-    echo '</div>';
+<?php
 }
 
 
