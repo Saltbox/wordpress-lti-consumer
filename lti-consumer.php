@@ -3,7 +3,7 @@
  * Plugin Name: LTI-compatible consumer
  * Plugin URI: 
  * Description: An LTI-compatible launching plugin for Wordpress.
- * Version: 0.2.10
+ * Version: 0.2.14
  * Author: John Weaver <john.weaver@saltbox.com>
  * License: GPLv3
  */
@@ -32,11 +32,12 @@ function create_lti_post_type_func() {
                 'not_found_in_trash' => __('No LTI launchers found in Trash'),
             ),
             'description' => __('An LTI-compatible tool or content launch'),
-            'publicly_queryable' => false,
+            'publicly_queryable' => true,
             'public' => true,
             'has_archive' => true,
             'supports' => array(
                 'title',
+                'editor',
             ),
         )
     );
@@ -68,7 +69,7 @@ function lti_content_meta_box() {
 add_filter('get_sample_permalink_html', 'permalink_removal', 1000, 4);
 function permalink_removal($return, $id, $new_title, $new_slug) {
     global $post;
-    if ( $post->post_type == 'lti_launch' ) {
+    if ( $post && $post->post_type == 'lti_launch' ) {
         return '';
     } else {
         return $return;
@@ -86,6 +87,7 @@ function lti_content_inner_custom_box($lti_content) {
     $launch_url = get_post_meta($lti_content->ID, '_lti_meta_launch_url', true);
     $configuration_url = get_post_meta($lti_content->ID, '_lti_meta_configuration_url', true);
     $return_url = get_post_meta($lti_content->ID, '_lti_meta_return_url', true);
+    $version= get_post_meta($lti_content->ID, '_lti_meta_version', true);
 
 ?>
     <p>All of the following fields are optional, and can be overridden by specifying the corresponding parameters to the lti-launch shortcode.</p>
@@ -100,7 +102,7 @@ function lti_content_inner_custom_box($lti_content) {
 
     <tr>
       <th><label for="lti_content_field_"><?php echo _e( "OAuth Secret Key", 'lti-consumer' ); ?></label></th>
-      <td><input type="text" id="lti_content_field_secret_key" name="lti_content_field_secret_key" value="<?php esc_attr( $secret_key ); ?>" size="25" /></td>
+      <td><input type="text" id="lti_content_field_secret_key" name="lti_content_field_secret_key" value="<?php echo esc_attr( $secret_key ); ?>" size="25" /></td>
     </tr>
 
     </tr>
@@ -136,10 +138,30 @@ function lti_content_inner_custom_box($lti_content) {
       <th><label for="lti_content_field_return_url"><?php echo _e( "Return URL after completion", 'lti-consumer' ); ?></label></th>
       <td><input type="url" id="lti_content_field_return_url" name="lti_content_field_return_url" value="<?php echo esc_attr( $return_url ); ?>" size="35" /></td>
     </tr>
+
+    <tr>
+      <th><label for="lti_content_field_version_1_1"><?php _e( "LTI version", 'lti-consumer' ); ?></label></th>
+      <td>
+        <label>1.1 <input type="radio" <?php checked($version, 'LTI-1p1'); ?> id="lti_content_field_version_1_1" name="lti_content_field_version" value="LTI-1p1" /></label><br>
+        <label>1.0 <input type="radio" <?php checked($version, 'LTI-1p0'); ?> id="lti_content_field_version_1_0" name="lti_content_field_version" value="LTI-1p0"  /></label>
+      </td>
+    </tr>
   </tbody>
 </table>
 
 <?php
+}
+
+
+add_filter('the_content', 'lti_content_include_launcher');
+function lti_content_include_launcher($content) {
+    global $post;
+
+    if ( $post->post_type == 'lti_launch' ) {
+        $content .= '<p>[lti-launch id=' . $post->post_name . ' resource_link_id=' . $post->ID . ']</p>';
+    }
+
+    return $content;
 }
 
 
@@ -177,6 +199,7 @@ function lti_content_save_post($post_id) {
     $launch_url = sanitize_text_field($_POST['lti_content_field_launch_url']);
     $configuration_url = sanitize_text_field($_POST['lti_content_field_configuration_url']);
     $return_url = sanitize_text_field($_POST['lti_content_field_return_url']);
+    $version = sanitize_text_field($_POST['lti_content_field_version']);
 
     // Update the meta field in the database.
     update_post_meta($post_id, '_lti_meta_consumer_key', $consumer_key);
@@ -186,6 +209,7 @@ function lti_content_save_post($post_id) {
     update_post_meta($post_id, '_lti_meta_launch_url', $launch_url);
     update_post_meta($post_id, '_lti_meta_configuration_url', $configuration_url);
     update_post_meta($post_id, '_lti_meta_return_url', $return_url);
+    update_post_meta($post_id, '_lti_meta_version', $version);
 }
 
 
@@ -230,9 +254,9 @@ function lti_launch_func($attrs) {
                 do_action('lti_launch', $data['id']);
             }
         } else if ( $data['action'] == 'link' ) {
-            $html .= '<a href="#" onclick="lti_consumer_launch(\'' . $id . '\')">Launch</a>';
+            $html .= '<a href="#" onclick="lti_consumer_launch(\'' . $id . '\')">Launch ' . $data['text'] . '</a>';
         } else {
-            $html .= '<button onclick="lti_consumer_launch(\'' . $id . '\')">Launch</button>';
+            $html .= '<button onclick="lti_consumer_launch(\'' . $id . '\')">Launch ' . $data['text'] . '</button>';
         }
 
         $html .= '</form>';
@@ -406,6 +430,7 @@ function lti_launch_process($attrs) {
         $parameters = array_merge($parameters, extract_site_id());
 
         $post_id = '';
+        $text = '';
 
         if ( array_key_exists('id', $attrs) ) {
             $posts = get_posts(array(
@@ -425,6 +450,8 @@ function lti_launch_process($attrs) {
                 $launch_url = get_post_meta($lti_content->ID, '_lti_meta_launch_url', true);
                 $configuration_url = get_post_meta($lti_content->ID, '_lti_meta_configuration_url', true);
                 $return_url = get_post_meta($lti_content->ID, '_lti_meta_return_url', true);
+                $text = $lti_content->post_title;
+                $version = get_post_meta($lti_content->ID, '_lti_meta_version', true) or 'LTI-1p1';
             }
         }
 
@@ -437,8 +464,14 @@ function lti_launch_process($attrs) {
 
         if ( array_key_exists('return_url', $attrs) ) {
             $parameters['launch_presentation_return_url'] = $attrs['return_url'];
-        } else if ( isset($return_url) ) {
+        } else if ( isset($return_url) && $return_url ) {
             $parameters['launch_presentation_return_url'] = $return_url;
+        }
+
+        if ( array_key_exists('version', $attrs) ) {
+            $version = $attrs['version'];
+        } else if ( !isset($version) ) {
+            $version = 'LTI-1p1';
         }
 
         if ( array_key_exists('configuration_url', $attrs) ) {
@@ -449,7 +482,7 @@ function lti_launch_process($attrs) {
             }
         } else if ( array_key_exists('launch_url', $attrs) ) {
             $launch_url = $attrs['launch_url'];
-        } else if ( isset($configuration_url) ) {
+        } else if ( isset($configuration_url) && $configuration_url ) {
             $launch_url = determine_launch_url($configuration_url);
 
             if ( $launch_url == false ) {
@@ -487,6 +520,7 @@ function lti_launch_process($attrs) {
 
         return array(
             'parameters' => package_launch(
+                $version,
                 $consumer_key, $consumer_secret,
                 $launch_url,
                 $parameters),
@@ -494,13 +528,14 @@ function lti_launch_process($attrs) {
             'display' => $display,
             'action' => $action,
             'url' => $launch_url,
+            'text' => $text,
         );
     }
 }
 
 
-function package_launch($key, $secret, $launch_url, $parameters) {
-    $parameters['lti_version'] = 'LTI-1p1';
+function package_launch($version, $key, $secret, $launch_url, $parameters) {
+    $parameters['lti_version'] = $version;
     $parameters['lti_message_type'] = 'basic-lti-launch-request';
 
     $consumer = new OAuthConsumer($key, $secret);
