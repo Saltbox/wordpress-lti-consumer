@@ -3,7 +3,7 @@
  * Plugin Name: LTI-compatible consumer
  * Plugin URI: 
  * Description: An LTI-compatible launching plugin for Wordpress.
- * Version: 0.2.11
+ * Version: 0.2.12
  * Author: John Weaver <john.weaver@saltbox.com>
  * License: GPLv3
  */
@@ -144,6 +144,18 @@ function lti_content_inner_custom_box($lti_content) {
 }
 
 
+add_filter('the_content', 'lti_content_include_launcher');
+function lti_content_include_launcher($content) {
+    global $post;
+
+    if ( $post->post_type == 'lti_launch' ) {
+        $content .= '<p>[lti-launch id=' . $post->post_name . ' resource_link_id=' . $post->ID . ']</p>';
+    }
+
+    return $content;
+}
+
+
 add_action('save_post', 'lti_content_save_post');
 function lti_content_save_post($post_id) {
     // From http://codex.wordpress.org/Function_Reference/add_meta_box
@@ -231,9 +243,9 @@ function lti_launch_func($attrs) {
                 do_action('lti_launch', $data['id']);
             }
         } else if ( $data['action'] == 'link' ) {
-            $html .= '<a href="#" onclick="lti_consumer_launch(\'' . $id . '\')">Launch</a>';
+            $html .= '<a href="#" onclick="lti_consumer_launch(\'' . $id . '\')">Launch ' . $data['text'] . '</a>';
         } else {
-            $html .= '<button onclick="lti_consumer_launch(\'' . $id . '\')">Launch</button>';
+            $html .= '<button onclick="lti_consumer_launch(\'' . $id . '\')">Launch ' . $data['text'] . '</button>';
         }
 
         $html .= '</form>';
@@ -407,6 +419,7 @@ function lti_launch_process($attrs) {
         $parameters = array_merge($parameters, extract_site_id());
 
         $post_id = '';
+        $text = '';
 
         if ( array_key_exists('id', $attrs) ) {
             $posts = get_posts(array(
@@ -426,6 +439,7 @@ function lti_launch_process($attrs) {
                 $launch_url = get_post_meta($lti_content->ID, '_lti_meta_launch_url', true);
                 $configuration_url = get_post_meta($lti_content->ID, '_lti_meta_configuration_url', true);
                 $return_url = get_post_meta($lti_content->ID, '_lti_meta_return_url', true);
+                $text = $lti_content->post_title;
             }
         }
 
@@ -438,7 +452,7 @@ function lti_launch_process($attrs) {
 
         if ( array_key_exists('return_url', $attrs) ) {
             $parameters['launch_presentation_return_url'] = $attrs['return_url'];
-        } else if ( isset($return_url) ) {
+        } else if ( isset($return_url) && $return_url ) {
             $parameters['launch_presentation_return_url'] = $return_url;
         }
 
@@ -450,7 +464,7 @@ function lti_launch_process($attrs) {
             }
         } else if ( array_key_exists('launch_url', $attrs) ) {
             $launch_url = $attrs['launch_url'];
-        } else if ( isset($configuration_url) ) {
+        } else if ( isset($configuration_url) && $configuration_url ) {
             $launch_url = determine_launch_url($configuration_url);
 
             if ( $launch_url == false ) {
@@ -495,6 +509,7 @@ function lti_launch_process($attrs) {
             'display' => $display,
             'action' => $action,
             'url' => $launch_url,
+            'text' => $text,
         );
     }
 }
