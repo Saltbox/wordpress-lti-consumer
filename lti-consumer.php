@@ -3,7 +3,7 @@
  * Plugin Name: LTI-compatible consumer
  * Plugin URI: 
  * Description: An LTI-compatible launching plugin for Wordpress.
- * Version: 0.2.10
+ * Version: 0.2.11
  * Author: John Weaver <john.weaver@saltbox.com>
  * License: GPLv3
  */
@@ -32,11 +32,12 @@ function create_lti_post_type_func() {
                 'not_found_in_trash' => __('No LTI launchers found in Trash'),
             ),
             'description' => __('An LTI-compatible tool or content launch'),
-            'publicly_queryable' => false,
+            'publicly_queryable' => true,
             'public' => true,
             'has_archive' => true,
             'supports' => array(
                 'title',
+                'editor',
             ),
         )
     );
@@ -68,7 +69,7 @@ function lti_content_meta_box() {
 add_filter('get_sample_permalink_html', 'permalink_removal', 1000, 4);
 function permalink_removal($return, $id, $new_title, $new_slug) {
     global $post;
-    if ( $post->post_type == 'lti_launch' ) {
+    if ( $post && $post->post_type == 'lti_launch' ) {
         return '';
     } else {
         return $return;
@@ -100,7 +101,7 @@ function lti_content_inner_custom_box($lti_content) {
 
     <tr>
       <th><label for="lti_content_field_"><?php echo _e( "OAuth Secret Key", 'lti-consumer' ); ?></label></th>
-      <td><input type="text" id="lti_content_field_secret_key" name="lti_content_field_secret_key" value="<?php esc_attr( $secret_key ); ?>" size="25" /></td>
+      <td><input type="text" id="lti_content_field_secret_key" name="lti_content_field_secret_key" value="<?php echo esc_attr( $secret_key ); ?>" size="25" /></td>
     </tr>
 
     </tr>
