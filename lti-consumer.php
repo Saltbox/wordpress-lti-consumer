@@ -3,7 +3,7 @@
  * Plugin Name: LTI-compatible consumer
  * Plugin URI: 
  * Description: An LTI-compatible launching plugin for Wordpress.
- * Version: 0.2.12
+ * Version: 0.2.13
  * Author: John Weaver <john.weaver@saltbox.com>
  * License: GPLv3
  */
@@ -87,6 +87,7 @@ function lti_content_inner_custom_box($lti_content) {
     $launch_url = get_post_meta($lti_content->ID, '_lti_meta_launch_url', true);
     $configuration_url = get_post_meta($lti_content->ID, '_lti_meta_configuration_url', true);
     $return_url = get_post_meta($lti_content->ID, '_lti_meta_return_url', true);
+    $version= get_post_meta($lti_content->ID, '_lti_meta_version', true);
 
 ?>
     <p>All of the following fields are optional, and can be overridden by specifying the corresponding parameters to the lti-launch shortcode.</p>
@@ -136,6 +137,14 @@ function lti_content_inner_custom_box($lti_content) {
     <tr>
       <th><label for="lti_content_field_return_url"><?php echo _e( "Return URL after completion", 'lti-consumer' ); ?></label></th>
       <td><input type="url" id="lti_content_field_return_url" name="lti_content_field_return_url" value="<?php echo esc_attr( $return_url ); ?>" size="35" /></td>
+    </tr>
+
+    <tr>
+      <th><label for="lti_content_field_version_1_1"><?php _e( "LTI version", 'lti-consumer' ); ?></label></th>
+      <td>
+        <label>1.1 <input type="radio" <?php checked($version, 'LTI-1p1'); ?> id="lti_content_field_version_1_1" name="lti_content_field_version" value="LTI-1p1" /></label><br>
+        <label>1.0 <input type="radio" <?php checked($action, 'LTI-1p0'); ?> id="lti_content_field_version_1_0" name="lti_content_field_version" value="LTI-1p0"  /></label>
+      </td>
     </tr>
   </tbody>
 </table>
@@ -190,6 +199,7 @@ function lti_content_save_post($post_id) {
     $launch_url = sanitize_text_field($_POST['lti_content_field_launch_url']);
     $configuration_url = sanitize_text_field($_POST['lti_content_field_configuration_url']);
     $return_url = sanitize_text_field($_POST['lti_content_field_return_url']);
+    $version = sanitize_text_field($_POST['lti_content_field_version']);
 
     // Update the meta field in the database.
     update_post_meta($post_id, '_lti_meta_consumer_key', $consumer_key);
@@ -199,6 +209,7 @@ function lti_content_save_post($post_id) {
     update_post_meta($post_id, '_lti_meta_launch_url', $launch_url);
     update_post_meta($post_id, '_lti_meta_configuration_url', $configuration_url);
     update_post_meta($post_id, '_lti_meta_return_url', $return_url);
+    update_post_meta($post_id, '_lti_meta_version', $version);
 }
 
 
@@ -440,6 +451,7 @@ function lti_launch_process($attrs) {
                 $configuration_url = get_post_meta($lti_content->ID, '_lti_meta_configuration_url', true);
                 $return_url = get_post_meta($lti_content->ID, '_lti_meta_return_url', true);
                 $text = $lti_content->post_title;
+                $version = get_post_meta($lti_content->ID, '_lti_meta_version', true) or 'LTI-1p1';
             }
         }
 
@@ -454,6 +466,12 @@ function lti_launch_process($attrs) {
             $parameters['launch_presentation_return_url'] = $attrs['return_url'];
         } else if ( isset($return_url) && $return_url ) {
             $parameters['launch_presentation_return_url'] = $return_url;
+        }
+
+        if ( array_key_exists('version', $attrs) ) {
+            $version = $attrs['version'];
+        } else if ( !isset($version) ) {
+            $version = 'LTI-1p1';
         }
 
         if ( array_key_exists('configuration_url', $attrs) ) {
@@ -502,6 +520,7 @@ function lti_launch_process($attrs) {
 
         return array(
             'parameters' => package_launch(
+                $version,
                 $consumer_key, $consumer_secret,
                 $launch_url,
                 $parameters),
@@ -515,8 +534,8 @@ function lti_launch_process($attrs) {
 }
 
 
-function package_launch($key, $secret, $launch_url, $parameters) {
-    $parameters['lti_version'] = 'LTI-1p1';
+function package_launch($version, $key, $secret, $launch_url, $parameters) {
+    $parameters['lti_version'] = $version;
     $parameters['lti_message_type'] = 'basic-lti-launch-request';
 
     $consumer = new OAuthConsumer($key, $secret);
