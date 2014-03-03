@@ -3,7 +3,7 @@
  * Plugin Name: LTI-compatible consumer
  * Plugin URI: 
  * Description: An LTI-compatible launching plugin for Wordpress.
- * Version: 0.2.14
+ * Version: 0.2.15
  * Author: John Weaver <john.weaver@saltbox.com>
  * License: GPLv3
  */
@@ -21,17 +21,17 @@ function create_lti_post_type_func() {
         'lti_launch',
         array(
             'labels' => array(
-                'name' => __('LTI-launchable content'),
-                'singular_name' => __('LTI-launchable content'),
-                'add_new_item' => __('Add new LTI launcher'),
-                'edit_item' => __('Edit LTI launcher'),
-                'new_item' => __('New LTI launcher'),
-                'view_item' => __('View LTI launcher'),
-                'search_items' => __('Search LTI launchers'),
-                'not_found' => __('No LTI launchers found'),
-                'not_found_in_trash' => __('No LTI launchers found in Trash'),
+                'name' => __('LTI content'),
+                'singular_name' => __('LTI content'),
+                'add_new_item' => __('Add new LTI content'),
+                'edit_item' => __('Edit LTI content'),
+                'new_item' => __('New LTI content'),
+                'view_item' => __('View LTI content'),
+                'search_items' => __('Search LTI content'),
+                'not_found' => __('No LTI content found'),
+                'not_found_in_trash' => __('No LTI content found in Trash'),
             ),
-            'description' => __('An LTI-compatible tool or content launch'),
+            'description' => __('An LTI-compatible tool for content launch'),
             'publicly_queryable' => true,
             'public' => true,
             'has_archive' => true,
@@ -248,7 +248,7 @@ function lti_launch_func($attrs) {
         }
 
         if ( $data['display'] == 'iframe' ) {
-            $html .= '<iframe style="width: 100%; height: 55em;" class="launch-frame" id="frame-' . $iframeId . '"></iframe>';
+            $html .= '<iframe style="width: 100%; height: 55em;" class="launch-frame" name="frame-' . $iframeId . '"></iframe>';
             // Immediately send the lti_launch action when showing the iframe.
             if ( $data['id'] ) {
                 do_action('lti_launch', $data['id']);
