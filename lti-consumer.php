@@ -3,7 +3,7 @@
  * Plugin Name: LTI-compatible consumer
  * Plugin URI: 
  * Description: An LTI-compatible launching plugin for Wordpress.
- * Version: 0.2.10
+ * Version: 0.2.11
  * Author: John Weaver <john.weaver@saltbox.com>
  * License: GPLv3
  */
@@ -242,8 +242,8 @@ function lti_launch_func($attrs) {
 }
 
 
-add_action('wp_head', 'pluginname_ajaxurl');
-function pluginname_ajaxurl() {
+add_action('wp_head', 'lti_launch_ajaxurl');
+function lti_launch_ajaxurl() {
 ?>
         <script type="text/javascript">
         var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
@@ -308,6 +308,7 @@ function ensure_resource_link_id_func($post_id) {
  * Insert our LTI launch script into the page.
  */
 add_action('wp_enqueue_scripts', 'add_launch_script_func');
+add_action('admin_enqueue_scripts', 'add_launch_script_func');
 function add_launch_script_func() {
     wp_enqueue_script('lti_launch', plugins_url('scripts/launch.js', __FILE__), array('jquery'));
 }
