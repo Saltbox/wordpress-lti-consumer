@@ -368,7 +368,7 @@ function extract_user_id() {
     $current_user = wp_get_current_user();
 
     return array(
-        'user_id' => $current_user->user_id,
+        'user_id' => $current_user->ID,
         'lis_person_contact_email_primary' => $current_user->user_email,
         'lis_person_name_given' => $current_user->user_firstname,
         'lis_person_name_family' => $current_user->user_lastname,
