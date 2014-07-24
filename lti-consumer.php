@@ -3,7 +3,7 @@
  * Plugin Name: LTI-compatible consumer
  * Plugin URI: 
  * Description: An LTI-compatible launching plugin for Wordpress.
- * Version: 0.2.16
+ * Version: 0.2.18
  * Author: John Weaver <john.weaver@saltbox.com>
  * License: GPLv3
  */
@@ -196,9 +196,9 @@ function lti_content_save_post($post_id) {
     $secret_key = sanitize_text_field($_POST['lti_content_field_secret_key']);
     $display = sanitize_text_field($_POST['lti_content_field_display']);
     $action = sanitize_text_field($_POST['lti_content_field_action']);
-    $launch_url = sanitize_text_field($_POST['lti_content_field_launch_url']);
-    $configuration_url = sanitize_text_field($_POST['lti_content_field_configuration_url']);
-    $return_url = sanitize_text_field($_POST['lti_content_field_return_url']);
+    $launch_url = esc_url_raw($_POST['lti_content_field_launch_url']);
+    $configuration_url = esc_url_raw($_POST['lti_content_field_configuration_url']);
+    $return_url = esc_url_raw($_POST['lti_content_field_return_url']);
     $version = sanitize_text_field($_POST['lti_content_field_version']);
 
     // Update the meta field in the database.
@@ -242,7 +242,7 @@ function lti_launch_func($attrs) {
             $autolaunch = 'no';
         }
 
-        $html .= "<form method=\"post\" action=\"$data[url]\" target=\"$target\" id=\"launch-$id\" data-id=\"$id\" data-post=\"$data[id]\" data-auto-launch=\"$autolaunch\">";
+        $html .= "<form method=\"post\" action=\"" . esc_url($data['url']) . "\" target=\"$target\" id=\"launch-$id\" data-id=\"$id\" data-post=\"$data[id]\" data-auto-launch=\"$autolaunch\">";
         foreach ( $data['parameters'] as $key => $value ) {
             $html .= "<input type=\"hidden\" name=\"$key\" value=\"$value\">";
         }
@@ -450,6 +450,9 @@ function lti_launch_process($attrs) {
                 $action = get_post_meta($lti_content->ID, '_lti_meta_action', true);
                 $launch_url = get_post_meta($lti_content->ID, '_lti_meta_launch_url', true);
                 $configuration_url = get_post_meta($lti_content->ID, '_lti_meta_configuration_url', true);
+                if ( empty($configuration_url) ) {
+                        unset($configuration_url);
+                }
                 $return_url = get_post_meta($lti_content->ID, '_lti_meta_return_url', true);
                 $text = $lti_content->post_title;
                 $version = get_post_meta($lti_content->ID, '_lti_meta_version', true) or 'LTI-1p1';
@@ -489,7 +492,7 @@ function lti_launch_process($attrs) {
             if ( $launch_url == false ) {
                 return array('error' => 'Could not determine launch URL.');
             }
-        } else if ( !isset($launch_url) ) {
+        } else if ( !isset($launch_url) || empty($launch_url) ) {
             return array('error' => 'Missing launch URL and URL to configuration XML. One of these is required.');
         }
 
@@ -519,12 +522,21 @@ function lti_launch_process($attrs) {
             $action = 'button';
         }
 
-        return array(
-            'parameters' => package_launch(
+        $parameters = package_launch(
                 $version,
                 $consumer_key, $consumer_secret,
                 $launch_url,
-                $parameters),
+                $parameters);
+
+        // Strip out GET parameters from the parameters we pass
+        // into the POST body.
+        parse_str(parse_url($launch_url, PHP_URL_QUERY), $qs_params);
+        foreach ( $qs_params as $k => $v ) {
+                unset($parameters[$k]);
+        }
+
+        return array(
+            'parameters' => $parameters,
             'id' => $post_id,
             'display' => $display,
             'action' => $action,
