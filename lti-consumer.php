@@ -450,7 +450,7 @@ function lti_launch_process($attrs) {
                 $action = get_post_meta($lti_content->ID, '_lti_meta_action', true);
                 $launch_url = get_post_meta($lti_content->ID, '_lti_meta_launch_url', true);
                 $configuration_url = get_post_meta($lti_content->ID, '_lti_meta_configuration_url', true);
-                if ( empty($configuration_url) ) {
+                if ( $configuration_url === "" ) {
                         unset($configuration_url);
                 }
                 $return_url = get_post_meta($lti_content->ID, '_lti_meta_return_url', true);
@@ -492,7 +492,7 @@ function lti_launch_process($attrs) {
             if ( $launch_url == false ) {
                 return array('error' => 'Could not determine launch URL.');
             }
-        } else if ( !isset($launch_url) || empty($launch_url) ) {
+        } else if ( !isset($launch_url) || $launch_url === "" ) {
             return array('error' => 'Missing launch URL and URL to configuration XML. One of these is required.');
         }
 
