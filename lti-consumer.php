@@ -15,8 +15,8 @@ require('OAuth.php');
 /*
  * Create the lti_launch custom post type.
  */
-add_action('init', 'create_lti_post_type_func');
-function create_lti_post_type_func() {
+add_action('init', 'sb_create_lti_post_type_func');
+function sb_create_lti_post_type_func() {
     register_post_type(
         'lti_launch',
         array(
@@ -43,8 +43,8 @@ function create_lti_post_type_func() {
     );
 }
 
-add_filter('post_row_actions', 'add_shortcode_generator_link', 10, 2);
-function add_shortcode_generator_link($actions, $post) {
+add_filter('post_row_actions', 'sb_add_shortcode_generator_link', 10, 2);
+function sb_add_shortcode_generator_link($actions, $post) {
     if ( $post->post_type == 'lti_launch' ) {
         unset($actions['view']);
         $actions['shortcode_generator'] = 'Shortcode: [lti-launch id=' . $post->post_name . ']';
@@ -55,19 +55,19 @@ function add_shortcode_generator_link($actions, $post) {
 
 
 
-add_action('add_meta_boxes', 'lti_content_meta_box');
-function lti_content_meta_box() {
+add_action('add_meta_boxes', 'sb_lti_content_meta_box');
+function sb_lti_content_meta_box() {
     add_meta_box(
         'lti_content_custom_section_id',
         __('LTI launch settings', 'lti-consumer'),
-        'lti_content_inner_custom_box',
+        'sb_lti_content_inner_custom_box',
         'lti_launch'
     );
 }
 
 
-add_filter('get_sample_permalink_html', 'permalink_removal', 1000, 4);
-function permalink_removal($return, $id, $new_title, $new_slug) {
+add_filter('get_sample_permalink_html', 'sb_permalink_removal', 1000, 4);
+function sb_permalink_removal($return, $id, $new_title, $new_slug) {
     global $post;
     if ( $post && $post->post_type == 'lti_launch' ) {
         return '';
@@ -77,7 +77,7 @@ function permalink_removal($return, $id, $new_title, $new_slug) {
 }
 
 
-function lti_content_inner_custom_box($lti_content) {
+function sb_lti_content_inner_custom_box($lti_content) {
     wp_nonce_field('lti_content_inner_custom_box', 'lti_content_inner_custom_nonce');
 
     $consumer_key = get_post_meta($lti_content->ID, '_lti_meta_consumer_key', true);
@@ -153,8 +153,8 @@ function lti_content_inner_custom_box($lti_content) {
 }
 
 
-add_filter('the_content', 'lti_content_include_launcher');
-function lti_content_include_launcher($content) {
+add_filter('the_content', 'sb_lti_content_include_launcher');
+function sb_lti_content_include_launcher($content) {
     global $post;
 
     if ( $post->post_type == 'lti_launch' ) {
@@ -165,8 +165,8 @@ function lti_content_include_launcher($content) {
 }
 
 
-add_action('save_post', 'lti_content_save_post');
-function lti_content_save_post($post_id) {
+add_action('save_post', 'sb_lti_content_save_post');
+function sb_lti_content_save_post($post_id) {
     // From http://codex.wordpress.org/Function_Reference/add_meta_box
     // Check if our nonce is set.
     if ( ! isset( $_POST['lti_content_inner_custom_nonce'] ) ) {
@@ -176,7 +176,7 @@ function lti_content_save_post($post_id) {
     $nonce = $_POST['lti_content_inner_custom_nonce'];
     
     // Verify that the nonce is valid.
-    if ( ! wp_verify_nonce( $nonce, 'lti_content_inner_custom_box' ) ) {
+    if ( !wp_verify_nonce( $nonce, 'lti_content_inner_custom_box' ) ) {
           return $post_id;
     }
     
@@ -185,7 +185,7 @@ function lti_content_save_post($post_id) {
         return $post_id;
     }
 
-    if ( ! current_user_can( 'edit_post', $post_id ) ) {
+    if ( !current_user_can( 'edit_post', $post_id ) ) {
         return $post_id;
     }
 
@@ -217,9 +217,9 @@ function lti_content_save_post($post_id) {
 /*
  * Add the lti-launch shortcode.
  */
-add_shortcode('lti-launch', 'lti_launch_func');
-function lti_launch_func($attrs) {
-    $data = lti_launch_process($attrs);
+add_shortcode('lti-launch', 'sb_lti_launch_func');
+function sb_lti_launch_func($attrs) {
+    $data = sb_lti_launch_process($attrs);
 
     if ( array_key_exists('error', $data) ) {
         $html = '<div class="error"><p><strong>' . $data['error'] . '</strong></p></div>';
@@ -266,8 +266,8 @@ function lti_launch_func($attrs) {
 }
 
 
-add_action('wp_head', 'lti_launch_ajaxurl');
-function lti_launch_ajaxurl() {
+add_action('wp_head', 'sb_lti_launch_ajaxurl');
+function sb_lti_launch_ajaxurl() {
 ?>
         <script type="text/javascript">
         var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
@@ -280,9 +280,9 @@ function lti_launch_ajaxurl() {
  * Emit an 'lti_launch' action when the Javascript informs us about a
  * launch.
  */
-add_action('wp_ajax_lti_launch', 'hook_lti_launch_action_func');
-add_action('wp_ajax_nopriv_lti_launch', 'hook_lti_launch_action_func');
-function hook_lti_launch_action_func() {
+add_action('wp_ajax_lti_launch', 'sb_hook_lti_launch_action_func');
+add_action('wp_ajax_nopriv_lti_launch', 'sb_hook_lti_launch_action_func');
+function sb_hook_lti_launch_action_func() {
     $lti_launch = get_post($_POST['post']);
     // make sure that at least the post id is valid
     if ( $lti_launch && $lti_launch->post_type == 'lti_launch' ) {
@@ -295,8 +295,8 @@ function hook_lti_launch_action_func() {
  * Find lti-launch shortcodes in posts and add a resource_link_id to any found
  * if they don't already have one set.
  */
-add_action('save_post', 'ensure_resource_link_id_func', 5, 1);
-function ensure_resource_link_id_func($post_id) {
+add_action('save_post', 'sb_ensure_resource_link_id_func', 5, 1);
+function sb_ensure_resource_link_id_func($post_id) {
     // get post content
     $content = get_post($post_id)->post_content;
 
@@ -309,7 +309,7 @@ function ensure_resource_link_id_func($post_id) {
             // Replace the original shortcode with the rewritten one
             $content = substr_replace(
                 $content,
-                add_resource_link_id_if_not_present($match),
+                sb_add_resource_link_id_if_not_present($match),
                 strpos($content, $match),
                 strlen($match));
         }
@@ -318,13 +318,13 @@ function ensure_resource_link_id_func($post_id) {
     // transform content
     
     // unhook this function so it doesn't loop infinitely
-    remove_action('save_post', 'ensure_resource_link_id_func', 5, 1);
+    remove_action('save_post', 'sb_ensure_resource_link_id_func', 5, 1);
 
     // update the post, which calls save_post again
     wp_update_post(array('ID' => $post_id, 'post_content' => $content));
 
     // re-hook this function
-    add_action('save_post', 'ensure_resource_link_id_func', 5, 1);
+    add_action('save_post', 'sb_ensure_resource_link_id_func', 5, 1);
 
     return $post_id;
 }
@@ -333,14 +333,14 @@ function ensure_resource_link_id_func($post_id) {
 /*
  * Insert our LTI launch script into the page.
  */
-add_action('wp_enqueue_scripts', 'add_launch_script_func');
-add_action('admin_enqueue_scripts', 'add_launch_script_func');
-function add_launch_script_func() {
+add_action('wp_enqueue_scripts', 'sb_add_launch_script_func');
+add_action('admin_enqueue_scripts', 'sb_add_launch_script_func');
+function sb_add_launch_script_func() {
     wp_enqueue_script('lti_launch', plugins_url('scripts/launch.js', __FILE__), array('jquery'));
 }
 
 
-function add_resource_link_id_if_not_present($shortcode) {
+function sb_add_resource_link_id_if_not_present($shortcode) {
     // split args out of shortcode, excluding the [] as well
     $pieces = explode(' ', substr($shortcode, 1, -1));
 
@@ -365,7 +365,7 @@ function add_resource_link_id_if_not_present($shortcode) {
 /*
  * Utilities
  */
-function extract_user_id() {
+function sb_extract_user_id() {
     // Find some relevant information about the current user
     $current_user = wp_get_current_user();
 
@@ -377,7 +377,7 @@ function extract_user_id() {
     );
 }
 
-function extract_site_id() {
+function sb_extract_site_id() {
     // Find some relevant information about the site
     return array(
         'context_id' => basename(get_permalink()),
@@ -386,7 +386,7 @@ function extract_site_id() {
 }
 
 
-function determine_launch_url($configuration_url) {
+function sb_determine_launch_url($configuration_url) {
     $launch_url = wp_cache_get($configuration_url, 'lti-consumer', false, $found);
     if ( $found ) {
         return $launch_url;
@@ -421,16 +421,16 @@ function determine_launch_url($configuration_url) {
 }
 
 
-function lti_launch_process($attrs) {
+function sb_lti_launch_process($attrs) {
     // Reject launch for non-logged in users
     if ( !is_user_logged_in() ) {
         return array('error' => 'You must be logged in to launch this content.');
     } else {
         $parameters = array();
         // grab user information
-        $parameters = array_merge($parameters, extract_user_id());
+        $parameters = array_merge($parameters, sb_extract_user_id());
         // grab site information
-        $parameters = array_merge($parameters, extract_site_id());
+        $parameters = array_merge($parameters, sb_extract_site_id());
 
         $post_id = '';
         $text = '';
@@ -481,7 +481,7 @@ function lti_launch_process($attrs) {
         }
 
         if ( array_key_exists('configuration_url', $attrs) ) {
-            $launch_url = determine_launch_url($attrs['configuration_url']);
+            $launch_url = sb_determine_launch_url($attrs['configuration_url']);
 
             if ( $launch_url == false ) {
                 return array('error' => 'Could not determine launch URL.');
@@ -489,7 +489,7 @@ function lti_launch_process($attrs) {
         } else if ( array_key_exists('launch_url', $attrs) ) {
             $launch_url = $attrs['launch_url'];
         } else if ( isset($configuration_url) && $configuration_url ) {
-            $launch_url = determine_launch_url($configuration_url);
+            $launch_url = sb_determine_launch_url($configuration_url);
 
             if ( $launch_url == false ) {
                 return array('error' => 'Could not determine launch URL.');
@@ -524,7 +524,7 @@ function lti_launch_process($attrs) {
             $action = 'button';
         }
 
-        $parameters = package_launch(
+        $parameters = sb_package_launch(
                 $version,
                 $consumer_key, $consumer_secret,
                 $launch_url,
@@ -549,7 +549,7 @@ function lti_launch_process($attrs) {
 }
 
 
-function package_launch($version, $key, $secret, $launch_url, $parameters) {
+function sb_package_launch($version, $key, $secret, $launch_url, $parameters) {
     $parameters['lti_version'] = $version;
     $parameters['lti_message_type'] = 'basic-lti-launch-request';
 
