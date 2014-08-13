@@ -3,7 +3,7 @@
  * Plugin Name: LTI-compatible consumer
  * Plugin URI: 
  * Description: An LTI-compatible launching plugin for Wordpress.
- * Version: 0.2.18
+ * Version: 0.3.0
  * Author: John Weaver <john.weaver@saltbox.com>
  * License: GPLv3
  */
