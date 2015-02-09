@@ -89,6 +89,10 @@ function sb_lti_content_inner_custom_box($lti_content) {
     $return_url = get_post_meta($lti_content->ID, '_lti_meta_return_url', true);
     $version = get_post_meta($lti_content->ID, '_lti_meta_version', true);
     
+    if ( $display === '' ) {
+        $display = 'iframe';
+    }
+    
     if ( $version !== 'LTI-1p1' && $version !== 'LTI-1p0' ) {
         $version = 'LTI-1p1';
     }
