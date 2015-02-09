@@ -87,7 +87,11 @@ function sb_lti_content_inner_custom_box($lti_content) {
     $launch_url = get_post_meta($lti_content->ID, '_lti_meta_launch_url', true);
     $configuration_url = get_post_meta($lti_content->ID, '_lti_meta_configuration_url', true);
     $return_url = get_post_meta($lti_content->ID, '_lti_meta_return_url', true);
-    $version= get_post_meta($lti_content->ID, '_lti_meta_version', true);
+    $version = get_post_meta($lti_content->ID, '_lti_meta_version', true);
+    
+    if ( $version !== 'LTI-1p1' && $version !== 'LTI-1p0' ) {
+        $version = 'LTI-1p1';
+    }
 
 ?>
     <p>All of the following fields are optional, and can be overridden by specifying the corresponding parameters to the lti-launch shortcode.</p>
