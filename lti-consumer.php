@@ -1,13 +1,14 @@
 <?php
 /**
  * Plugin Name: LTI-compatible consumer
- * Plugin URI: 
+ * Plugin URI:
  * Description: An LTI-compatible launching plugin for Wordpress.
- * Version: 0.3.0
+ * Version: 0.4.0
  * Author: John Weaver <john.weaver@saltbox.com>
  * License: GPLv3
  */
 
+namespace Saltbox;
 
 require('OAuth.php');
 
@@ -15,7 +16,7 @@ require('OAuth.php');
 /*
  * Create the lti_launch custom post type.
  */
-add_action('init', 'sb_create_lti_post_type_func');
+add_action('init', 'Saltbox\sb_create_lti_post_type_func');
 function sb_create_lti_post_type_func() {
     register_post_type(
         'lti_launch',
@@ -43,7 +44,7 @@ function sb_create_lti_post_type_func() {
     );
 }
 
-add_filter('post_row_actions', 'sb_add_shortcode_generator_link', 10, 2);
+add_filter('post_row_actions', 'Saltbox\sb_add_shortcode_generator_link', 10, 2);
 function sb_add_shortcode_generator_link($actions, $post) {
     if ( $post->post_type == 'lti_launch' ) {
         unset($actions['view']);
@@ -55,7 +56,7 @@ function sb_add_shortcode_generator_link($actions, $post) {
 
 
 
-add_action('add_meta_boxes', 'sb_lti_content_meta_box');
+add_action('add_meta_boxes', 'Saltbox\sb_lti_content_meta_box');
 function sb_lti_content_meta_box() {
     add_meta_box(
         'lti_content_custom_section_id',
@@ -66,7 +67,7 @@ function sb_lti_content_meta_box() {
 }
 
 
-add_filter('get_sample_permalink_html', 'sb_permalink_removal', 1000, 4);
+add_filter('get_sample_permalink_html', 'Saltbox\sb_permalink_removal', 1000, 4);
 function sb_permalink_removal($return, $id, $new_title, $new_slug) {
     global $post;
     if ( $post && $post->post_type == 'lti_launch' ) {
@@ -88,11 +89,11 @@ function sb_lti_content_inner_custom_box($lti_content) {
     $configuration_url = get_post_meta($lti_content->ID, '_lti_meta_configuration_url', true);
     $return_url = get_post_meta($lti_content->ID, '_lti_meta_return_url', true);
     $version = get_post_meta($lti_content->ID, '_lti_meta_version', true);
-    
+
     if ( $display === '' ) {
         $display = 'iframe';
     }
-    
+
     if ( $version !== 'LTI-1p1' && $version !== 'LTI-1p0' ) {
         $version = 'LTI-1p1';
     }
@@ -161,7 +162,7 @@ function sb_lti_content_inner_custom_box($lti_content) {
 }
 
 
-add_filter('the_content', 'sb_lti_content_include_launcher');
+add_filter('the_content', 'Saltbox\sb_lti_content_include_launcher');
 function sb_lti_content_include_launcher($content) {
     global $post;
 
@@ -173,21 +174,21 @@ function sb_lti_content_include_launcher($content) {
 }
 
 
-add_action('save_post', 'sb_lti_content_save_post');
+add_action('save_post', 'Saltbox\sb_lti_content_save_post');
 function sb_lti_content_save_post($post_id) {
     // From http://codex.wordpress.org/Function_Reference/add_meta_box
     // Check if our nonce is set.
     if ( ! isset( $_POST['lti_content_inner_custom_nonce'] ) ) {
         return $post_id;
     }
-    
+
     $nonce = $_POST['lti_content_inner_custom_nonce'];
-    
+
     // Verify that the nonce is valid.
     if ( !wp_verify_nonce( $nonce, 'lti_content_inner_custom_box' ) ) {
           return $post_id;
     }
-    
+
     // If this is an autosave, our form has not been submitted, so we don't want to do anything.
     if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
         return $post_id;
@@ -225,7 +226,7 @@ function sb_lti_content_save_post($post_id) {
 /*
  * Add the lti-launch shortcode.
  */
-add_shortcode('lti-launch', 'sb_lti_launch_func');
+add_shortcode('lti-launch', 'Saltbox\sb_lti_launch_func');
 function sb_lti_launch_func($attrs) {
     $data = sb_lti_launch_process($attrs);
 
@@ -274,7 +275,7 @@ function sb_lti_launch_func($attrs) {
 }
 
 
-add_action('wp_head', 'sb_lti_launch_ajaxurl');
+add_action('wp_head', 'Saltbox\sb_lti_launch_ajaxurl');
 function sb_lti_launch_ajaxurl() {
 ?>
         <script type="text/javascript">
@@ -288,8 +289,8 @@ function sb_lti_launch_ajaxurl() {
  * Emit an 'lti_launch' action when the Javascript informs us about a
  * launch.
  */
-add_action('wp_ajax_lti_launch', 'sb_hook_lti_launch_action_func');
-add_action('wp_ajax_nopriv_lti_launch', 'sb_hook_lti_launch_action_func');
+add_action('wp_ajax_lti_launch', 'Saltbox\sb_hook_lti_launch_action_func');
+add_action('wp_ajax_nopriv_lti_launch', 'Saltbox\sb_hook_lti_launch_action_func');
 function sb_hook_lti_launch_action_func() {
     $lti_launch = get_post($_POST['post']);
     // make sure that at least the post id is valid
@@ -303,7 +304,7 @@ function sb_hook_lti_launch_action_func() {
  * Find lti-launch shortcodes in posts and add a resource_link_id to any found
  * if they don't already have one set.
  */
-add_action('save_post', 'sb_ensure_resource_link_id_func', 5, 1);
+add_action('save_post', 'Saltbox\sb_ensure_resource_link_id_func', 5, 1);
 function sb_ensure_resource_link_id_func($post_id) {
     // get post content
     $content = get_post($post_id)->post_content;
@@ -324,7 +325,7 @@ function sb_ensure_resource_link_id_func($post_id) {
     }
 
     // transform content
-    
+
     // unhook this function so it doesn't loop infinitely
     remove_action('save_post', 'sb_ensure_resource_link_id_func', 5, 1);
 
@@ -341,8 +342,8 @@ function sb_ensure_resource_link_id_func($post_id) {
 /*
  * Insert our LTI launch script into the page.
  */
-add_action('wp_enqueue_scripts', 'sb_add_launch_script_func');
-add_action('admin_enqueue_scripts', 'sb_add_launch_script_func');
+add_action('wp_enqueue_scripts', 'Saltbox\sb_add_launch_script_func');
+add_action('admin_enqueue_scripts', 'Saltbox\sb_add_launch_script_func');
 function sb_add_launch_script_func() {
     wp_enqueue_script('lti_launch', plugins_url('scripts/launch.js', __FILE__), array('jquery'));
 }

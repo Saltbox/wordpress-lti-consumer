@@ -1,4 +1,5 @@
 <?php
+namespace Saltbox;
 // This file is part of BasicLTI4Moodle
 //
 // BasicLTI4Moodle is an IMS BasicLTI (Basic Learning Tools for Interoperability)
