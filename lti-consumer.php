@@ -1,13 +1,14 @@
 <?php
 /**
  * Plugin Name: LTI-compatible consumer
- * Plugin URI: 
+ * Plugin URI:
  * Description: An LTI-compatible launching plugin for Wordpress.
  * Version: 0.3.0
  * Author: John Weaver <john.weaver@saltbox.com>
  * License: GPLv3
  */
 
+namespace Saltbox;
 
 require('OAuth.php');
 
@@ -88,11 +89,11 @@ function sb_lti_content_inner_custom_box($lti_content) {
     $configuration_url = get_post_meta($lti_content->ID, '_lti_meta_configuration_url', true);
     $return_url = get_post_meta($lti_content->ID, '_lti_meta_return_url', true);
     $version = get_post_meta($lti_content->ID, '_lti_meta_version', true);
-    
+
     if ( $display === '' ) {
         $display = 'iframe';
     }
-    
+
     if ( $version !== 'LTI-1p1' && $version !== 'LTI-1p0' ) {
         $version = 'LTI-1p1';
     }
@@ -180,14 +181,14 @@ function sb_lti_content_save_post($post_id) {
     if ( ! isset( $_POST['lti_content_inner_custom_nonce'] ) ) {
         return $post_id;
     }
-    
+
     $nonce = $_POST['lti_content_inner_custom_nonce'];
-    
+
     // Verify that the nonce is valid.
     if ( !wp_verify_nonce( $nonce, 'lti_content_inner_custom_box' ) ) {
           return $post_id;
     }
-    
+
     // If this is an autosave, our form has not been submitted, so we don't want to do anything.
     if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
         return $post_id;
@@ -324,7 +325,7 @@ function sb_ensure_resource_link_id_func($post_id) {
     }
 
     // transform content
-    
+
     // unhook this function so it doesn't loop infinitely
     remove_action('save_post', 'sb_ensure_resource_link_id_func', 5, 1);
 
