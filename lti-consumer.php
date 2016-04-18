@@ -3,7 +3,7 @@
  * Plugin Name: LTI-compatible consumer
  * Plugin URI:
  * Description: An LTI-compatible launching plugin for Wordpress.
- * Version: 0.4.0
+ * Version: 0.4.1
  * Author: John Weaver <john.weaver@saltbox.com>
  * License: GPLv3
  */
@@ -45,6 +45,7 @@ function sb_create_lti_post_type_func() {
 }
 
 add_filter('post_row_actions', 'Saltbox\sb_add_shortcode_generator_link', 10, 2);
+add_filter('page_row_actions', 'Saltbox\sb_add_shortcode_generator_link', 10, 2);
 function sb_add_shortcode_generator_link($actions, $post) {
     if ( $post->post_type == 'lti_launch' ) {
         unset($actions['view']);
