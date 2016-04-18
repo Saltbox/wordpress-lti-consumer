@@ -3,7 +3,7 @@
  * Plugin Name: LTI-compatible consumer
  * Plugin URI:
  * Description: An LTI-compatible launching plugin for Wordpress.
- * Version: 0.4.0
+ * Version: 0.4.1
  * Author: John Weaver <john.weaver@saltbox.com>
  * License: GPLv3
  */
@@ -45,6 +45,7 @@ function sb_create_lti_post_type_func() {
 }
 
 add_filter('post_row_actions', 'Saltbox\sb_add_shortcode_generator_link', 10, 2);
+add_filter('page_row_actions', 'Saltbox\sb_add_shortcode_generator_link', 10, 2);
 function sb_add_shortcode_generator_link($actions, $post) {
     if ( $post->post_type == 'lti_launch' ) {
         unset($actions['view']);
@@ -61,7 +62,7 @@ function sb_lti_content_meta_box() {
     add_meta_box(
         'lti_content_custom_section_id',
         __('LTI launch settings', 'lti-consumer'),
-        'sb_lti_content_inner_custom_box',
+        'Saltbox\sb_lti_content_inner_custom_box',
         'lti_launch'
     );
 }
@@ -327,13 +328,13 @@ function sb_ensure_resource_link_id_func($post_id) {
     // transform content
 
     // unhook this function so it doesn't loop infinitely
-    remove_action('save_post', 'sb_ensure_resource_link_id_func', 5, 1);
+    remove_action('save_post', 'Saltbox\sb_ensure_resource_link_id_func', 5, 1);
 
     // update the post, which calls save_post again
     wp_update_post(array('ID' => $post_id, 'post_content' => $content));
 
     // re-hook this function
-    add_action('save_post', 'sb_ensure_resource_link_id_func', 5, 1);
+    add_action('save_post', 'Saltbox\sb_ensure_resource_link_id_func', 5, 1);
 
     return $post_id;
 }

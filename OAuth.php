@@ -707,7 +707,7 @@ class OAuthUtil {
     public static function urlencode_rfc3986($input) {
         if (is_array($input)) {
             return array_map(array(
-                'OAuthUtil',
+                'Saltbox\OAuthUtil',
                 'urlencode_rfc3986'
             ), $input);
         } else {
