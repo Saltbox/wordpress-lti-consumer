@@ -3,6 +3,7 @@ An LTI-compatible launching plugin for Wordpress.
 
 General Wordpress plugin installation instructions can be found here: http://codex.wordpress.org/Managing_Plugins#Automatic_Plugin_Installation
 
+### Using shortcodes::
 
 After installing the plugin, add content launching with the [lti-launch]
 shortcode.
@@ -40,12 +41,16 @@ Options:
 - launch_url: The launch URL of the LTI-compatible tool
 
 
-
 Caution!  Since shortcodes are visible to content viewers if their plugin is
 disabled, OAuth secret keys will become visible if this plugin is disabled.
 
+### Using TLI Content::Launch Settings::
 
+After installing this plugin, you will notice a new "LTI content" menu item in the WP Admin dashboard. Here you will be able to create a custom post, witch in the end generates a shortcode that can be used on any page.
 
-Copyright (c) 2014 Saltbox Services.
+TLI Launch setting example::
+![Screenshot](/images/LTI-Launch-settings.jpg)
+
+Copyright (c) 2021 Saltbox Services.
 Licensed under the GPLv3. See the LICENSE.md file for details.
 
