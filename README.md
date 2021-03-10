@@ -46,7 +46,7 @@ disabled, OAuth secret keys will become visible if this plugin is disabled.
 After installing this plugin, you will notice a new "LTI content" menu item in the WP Admin dashboard. Here you will be able to create a custom post, witch in the end generates a shortcode that can be used on any page.
 
 TLI Launch setting example::
-![Screenshot](/images/LTI-Launch-settings.jpg)
+![Screenshot](/LTI-Launch-settings.jpg)
 
 Copyright (c) 2021 Saltbox Services.
 Licensed under the GPLv3. See the LICENSE.md file for details.
