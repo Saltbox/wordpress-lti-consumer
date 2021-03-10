@@ -1,23 +1,20 @@
 An LTI-compatible launching plugin for Wordpress.
 
-
 General Wordpress plugin installation instructions can be found here: http://codex.wordpress.org/Managing_Plugins#Automatic_Plugin_Installation
 
-### Using shortcodes::
+### Using shortcodes:
 
 After installing the plugin, add content launching with the [lti-launch]
 shortcode.
 
 
-Some examples::
+Some examples:
 
-  [lti-launch consumer_key=yourconsumerkey secret_key=yoursecretkey display=iframe configuration_url=http://launcher.saltbox.com/lms/configuration resource_link_id=testcourseplacement1]
-  
-  
-  [lti-launch consumer_key=yourconsumerkey secret_key=yoursecretkey display=newwindow action=link configuration_url=http://launcher.saltbox.com/lms/configuration resource_link_id=testcourseplacement1]
-  
-  
-  [lti-launch consumer_key=yourconsumerkey secret_key=yoursecretkey display=self action=button launch_url=http://launcher.saltbox.com/launch resource_link_id=testcourseplacement1]
+    [lti-launch consumer_key=yourconsumerkey secret_key=yoursecretkey display=iframe configuration_url=http://launcher.saltbox.com/lms/configuration resource_link_id=testcourseplacement1]
+    
+    [lti-launch consumer_key=yourconsumerkey secret_key=yoursecretkey display=newwindow action=link configuration_url=http://launcher.saltbox.com/lms/configuration resource_link_id=testcourseplacement1]
+    
+    [lti-launch consumer_key=yourconsumerkey secret_key=yoursecretkey display=self action=button launch_url=http://launcher.saltbox.com/launch resource_link_id=testcourseplacement1]
 
 
 Options:
@@ -44,7 +41,7 @@ Options:
 Caution!  Since shortcodes are visible to content viewers if their plugin is
 disabled, OAuth secret keys will become visible if this plugin is disabled.
 
-### Using TLI Content::Launch Settings::
+### Using TLI Content - Launch Settings:
 
 After installing this plugin, you will notice a new "LTI content" menu item in the WP Admin dashboard. Here you will be able to create a custom post, witch in the end generates a shortcode that can be used on any page.
 
