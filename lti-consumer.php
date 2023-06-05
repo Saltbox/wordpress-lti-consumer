@@ -3,14 +3,18 @@
  * Plugin Name: LTI-compatible consumer
  * Plugin URI:
  * Description: An LTI-compatible launching plugin for Wordpress.
- * Version: 0.4.2
- * Author: John Weaver <john.weaver@saltbox.com>
+ * Version: 0.4.6
+ * Author: John Weaver <john.weaver@saltbox.com>, Darrel Kleynhans
  * License: GPLv3
  */
 
 namespace Saltbox;
 
 require('OAuth.php');
+
+define('LTI_CONSUMER_PLUGIN_PATH', dirname(__FILE__) . '/');
+define('LTI_CONSUMER_PLUGIN_SITE_HOME_URL', get_site_url());
+define('LTI_CONSUMER_PLUGIN_URL', plugins_url('', __FILE__));
 
 
 /*
@@ -45,8 +49,215 @@ function sb_create_lti_post_type_func() {
     );
 }
 
+// Add menu item for options
+// Hook   
+add_action('admin_menu', 'Saltbox\add_sb_options_submenu');
+
+//admin_menu callback function
+function add_sb_options_submenu() {
+    add_submenu_page(
+            'edit.php?post_type=lti_launch', //$parent_slug
+            __('LTI content options'), //$page_title
+            __('LTI options'), //$menu_title
+            'manage_options', //$capability
+            'lti_launch_options', //$menu_slug
+            'Saltbox\sb_lti_options_submenu_render_page'//$function
+    );
+
+    add_submenu_page(
+            'edit.php?post_type=lti_launch', //$parent_slug
+            __('Content selector'), //$page_title
+            __('Content selector'), //$menu_title
+            'manage_options', //$capability
+            'lti_content_selector', //$menu_slug
+            'Saltbox\sb_lti_content_selector_submenu_render_page'//$function
+    );
+}
+
+//add_submenu_page callback function
+function sb_lti_options_submenu_render_page() {
+    if (!current_user_can('manage_options')) {
+        wp_die('Unauthorized user');
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        if (!isset($_POST['_wpnonce_sb_lti_options_page_action']) || !wp_verify_nonce($_POST['_wpnonce_sb_lti_options_page_action'], 'sb_lti_options_page_action')) {
+            //Nonce check failed.
+            wp_die("Error! Nonce verification failed from admin.");
+        }
+
+        if (isset($_POST['lti_instructor_user_role'])) {
+            update_option('lti_instructor_user_role', $_POST['lti_instructor_user_role']);
+        }
+    }
+
+    $instructor_role = get_option('lti_instructor_user_role', 'administrator');
+
+    $editable_roles = get_editable_roles();
+    include 'lti-consumer-form.php';
+}
+
+//add_submenu_page callback function
+function sb_lti_content_selector_submenu_render_page() {
+    if (!current_user_can('manage_options')) {
+        wp_die('Unauthorized user');
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        sb_get_lti_content_selector();
+        // include 'lti-launch-settings.php';
+        return;
+    }
+
+    //wp_nonce_field('lti_content_inner_custom_box', 'lti_content_inner_custom_nonce');
+    $instructor_role = get_option('lti_instructor_user_role', array('administrator'));
+    //Get all the admin WP users.
+    $args = array(
+        'role__in' => $instructor_role,
+        'orderby' => 'user_nicename',
+        'order' => 'ASC'
+    );
+    $users = get_users($args);
+
+    $consumer_key = get_option('lti_meta_consumer_key');
+    $secret_key = get_option('lti_meta_secret_key');
+    $display = get_option('lti_meta_display', 'iframe');
+    $action = get_option('lti_meta_action');
+    $launch_url = get_option('lti_meta_launch_url');
+    $configuration_url = get_option('lti_meta_configuration_url');
+    $return_url = get_option('lti_meta_return_url');
+    $version = get_option('lti_meta_version', 'LTI-1p1');
+    $instructor_user = get_option('lti_meta_instructor_user');
+    $institution_role = get_option('lti_meta_roles');
+    $other_parameters = get_option('lti_meta_other_parameters');
+    //admin_url('edit.php?post_type=lti_launch&page=lti_content_selector')
+    //echo LTI_CONSUMER_PLUGIN_URL . '/lti-content-selector.php'
+    ?>
+    <style>
+        .display_tr,.action_button_tr { display: none};
+
+    </style>
+    <form action="<?php admin_url('edit.php?post_type=lti_launch&page=lti_content_selector') ?>" method="post" target="_blank" >
+        <?php wp_nonce_field('sb_lti_content_selector_action', '_wpnonce_sb_lti_content_selector_action'); ?>
+        <?php include 'lti-launch-settings.php'; ?>
+        <input type="submit" name="Launch" id="launch" class="button button-primary button-large" value="launch">
+    </form>
+    <?php
+}
+
+function sb_get_lti_content_selector() {
+
+    if (!isset($_POST['_wpnonce_sb_lti_content_selector_action']) || !wp_verify_nonce($_POST['_wpnonce_sb_lti_content_selector_action'], 'sb_lti_content_selector_action')) {
+        //Nonce check failed.
+        wp_die("Error! Nonce verification failed from admin.");
+    }
+
+    $consumer_key = sanitize_text_field(filter_input(INPUT_POST, 'lti_content_field_consumer_key'));
+    $consumer_secret = sanitize_text_field(filter_input(INPUT_POST, 'lti_content_field_secret_key'));
+    // $display = sanitize_text_field(filter_input(INPUT_POST, 'lti_content_field_display'));
+    // $action = sanitize_text_field(filter_input(INPUT_POST, 'lti_content_field_action'));
+    $launch_url = esc_url_raw(filter_input(INPUT_POST, 'lti_content_field_launch_url'));
+    $configuration_url = esc_url_raw(filter_input(INPUT_POST, 'lti_content_field_configuration_url'));
+    $return_url = esc_url_raw(filter_input(INPUT_POST, 'lti_content_field_return_url'));
+    $version = sanitize_text_field(filter_input(INPUT_POST, 'lti_content_field_version'));
+    $instructor_user = sanitize_text_field(filter_input(INPUT_POST, 'lti_content_field_instructor_user'));
+    $institution_role = sanitize_text_field(filter_input(INPUT_POST, 'lti_content_field_role'));
+    $other_parameters = sanitize_textarea_field(filter_input(INPUT_POST, 'lti_content_field_other_parameters'));
+    $id = uniqid();
+
+    update_option('lti_meta_consumer_key', $consumer_key);
+    update_option('lti_meta_secret_key', $consumer_secret);
+    // update_option('lti_meta_display', $display);
+    // update_option('lti_meta_action', $action);
+    update_option('lti_meta_launch_url', $launch_url);
+    update_option('lti_meta_configuration_url', $configuration_url);
+    update_option('lti_meta_return_url', $return_url);
+    update_option('lti_meta_version', $version);
+    update_option('lti_meta_instructor_user', $instructor_user);
+    update_option('lti_meta_roles', $institution_role);
+    update_option('lti_meta_other_parameters', $other_parameters);
+
+    $parameters = array();
+    // grab site information
+    $parameters = array_merge($parameters, sb_extract_site_id());
+    // grab user information
+    $parameters = array_merge($parameters, sb_extract_user_id($instructor_user));
+
+    $parameters['resource_link_id'] = $id;
+    if (isset($institution_role) && $institution_role) {
+        $parameters['roles'] = $institution_role;
+    }
+
+    if (isset($return_url) && $return_url) {
+        $parameters['launch_presentation_return_url'] = $return_url;
+    }
+
+    if (!isset($version)) {
+        $version = 'LTI-1p1';
+    }
+
+    // var_dump($parameters);
+    if (isset($configuration_url) && $configuration_url) {
+        $launch_url = sb_determine_launch_url($configuration_url);
+
+        if ($launch_url == false) {
+            echo ( 'Could not determine launch URL.');
+        }
+    } else if (!isset($launch_url) || $launch_url === "") {
+        echo ( 'Missing launch URL and URL to configuration XML. One of these is required.');
+    }
+
+    if (!isset($consumer_key)) {
+        echo ( 'Missing OAuth consumer key.');
+    }
+
+    if (!isset($consumer_secret)) {
+        echo ( 'Missing OAuth consumer secret.');
+    }
+
+    if (!isset($display)) {
+        $display = 'iframe';
+    }
+
+    if (!isset($action)) {
+        $action = 'link';
+    }
+
+    if (isset($other_parameters) && !empty($other_parameters)) {
+        $obj = json_decode($other_parameters);
+        if ($obj != null)
+            foreach ($obj as $key => $value) {
+                $parameters[$key] = $value;
+            }
+    }
+
+    $parameters = sb_package_launch(
+            $version,
+            $consumer_key, $consumer_secret,
+            $launch_url,
+            $parameters);
+
+    // Strip out GET parameters from the parameters we pass
+    // into the POST body.
+    parse_str(parse_url($launch_url, PHP_URL_QUERY), $qs_params);
+    foreach ($qs_params as $k => $v) {
+        unset($parameters[$k]);
+    }
+
+
+
+    $html = sb_lti_launch(array(
+        'parameters' => array_filter($parameters),
+        'id' => $id,
+        'display' => $display,
+        'action' => $action,
+        'url' => $launch_url,
+        'text' => 'Lti content selector',
+    ));
+    echo $html;
+}
+
 add_filter('post_row_actions', 'Saltbox\sb_add_shortcode_generator_link', 10, 2);
-add_filter('page_row_actions', 'Saltbox\sb_add_shortcode_generator_link', 10, 2);
 
 function sb_add_shortcode_generator_link($actions, $post) {
     if ($post->post_type == 'lti_launch') {
@@ -81,10 +292,10 @@ function sb_permalink_removal($return, $id, $new_title, $new_slug) {
 
 function sb_lti_content_inner_custom_box($lti_content) {
     wp_nonce_field('lti_content_inner_custom_box', 'lti_content_inner_custom_nonce');
-
+    $instructor_role = get_option('lti_instructor_user_role', array('administrator'));
     //Get all the admin WP users.
     $args = array(
-        'role' => 'ADMINISTRATOR',
+        'role__in' => $instructor_role,
         'orderby' => 'user_nicename',
         'order' => 'ASC'
     );
@@ -99,6 +310,7 @@ function sb_lti_content_inner_custom_box($lti_content) {
     $return_url = get_post_meta($lti_content->ID, '_lti_meta_return_url', true);
     $version = get_post_meta($lti_content->ID, '_lti_meta_version', true);
     $instructor_user = get_post_meta($lti_content->ID, '_lti_meta_instructor_user', true);
+    $institution_role = get_post_meta($lti_content->ID, '_lti_meta_roles', true);
     $other_parameters = get_post_meta($lti_content->ID, '_lti_meta_other_parameters', true);
 
     if ($display === '') {
@@ -108,85 +320,8 @@ function sb_lti_content_inner_custom_box($lti_content) {
     if ($version !== 'LTI-1p1' && $version !== 'LTI-1p0') {
         $version = 'LTI-1p1';
     }
-    ?>
-    <p>All of the following fields are optional, and can be overridden by specifying the corresponding parameters to the lti-launch shortcode.</p>
-
-
-    <table class="form-table">
-        <tbody>
-            <tr>
-                <th><label for="lti_content_field_"><?php echo _e("OAuth Consumer Key", 'lti-consumer'); ?></label></th>
-                <td><input type="text" id="lti_content_field_consumer_key" name="lti_content_field_consumer_key" value="<?php echo esc_attr($consumer_key); ?>" size="25" /></td>
-            </tr>
-
-            <tr>
-                <th><label for="lti_content_field_"><?php echo _e("OAuth Secret Key", 'lti-consumer'); ?></label></th>
-                <td><input type="password" id="lti_content_field_secret_key" name="lti_content_field_secret_key" value="<?php echo esc_attr($secret_key); ?>" size="25" /></td>
-            </tr>
-
-            <tr>
-                <th><label for="lti_content_field_display_newwindow"><?php echo _e("Display Style", 'lti-consumer'); ?></label></th>
-                <td>
-                    <label>Open in a new browser window <input type="radio" <?php checked($display, 'newwindow'); ?> id="lti_content_field_display_newwindow" name="lti_content_field_display" value="newwindow" /></label><br>
-                    <label>Inline in an iframe <input type="radio" <?php checked($display, 'iframe'); ?> id="lti_content_field_display_iframe" name="lti_content_field_display" value="iframe" /></label><br>
-                    <label>Open in the current browser window <input type="radio" <?php checked($display, 'self'); ?> id="lti_content_field_display_self" name="lti_content_field_display" value="self" /></label>
-                </td>
-            </tr>
-
-            <tr>
-                <th><label for="lti_content_field_action_button"><?php _e("Launch trigger control", 'lti-consumer'); ?></label></th>
-                <td>
-                    <label>Button <input type="radio" <?php checked($action, 'button'); ?> id="lti_content_field_action_button" name="lti_content_field_action" value="button" /></label><br>
-                    <label>Link <input type="radio" <?php checked($action, 'link'); ?> id="lti_content_field_action_link" name="lti_content_field_action" value="link"  /></label>
-                </td>
-            </tr>
-
-            <tr>
-                <th><label for="lti_content_field_launch_url"><?php echo _e("Launch URL", 'lti-consumer'); ?></label></th>
-                <td><input type="url" id="lti_content_field_launch_url" name="lti_content_field_launch_url" value="<?php echo esc_attr($launch_url); ?>" size="35" /></td>
-            </tr>
-
-            <tr>
-                <th><label for="lti_content_field_configuration_url"><?php echo _e("Configuration XML URL", 'lti-consumer'); ?></label></th>
-                <td><input type="url" id="lti_content_field_configuration_url" name="lti_content_field_configuration_url" value="<?php echo esc_attr($configuration_url) ?>" size="35" /></td>
-            </tr>
-
-            <tr>
-                <th><label for="lti_content_field_return_url"><?php echo _e("Return URL after completion", 'lti-consumer'); ?></label></th>
-                <td><input type="url" id="lti_content_field_return_url" name="lti_content_field_return_url" value="<?php echo esc_attr($return_url); ?>" size="35" /></td>
-            </tr>
-
-            <tr>
-                <th><label for="lti_content_field_version_1_1"><?php _e("LTI version", 'lti-consumer'); ?></label></th>
-                <td>
-                    <label>1.1 <input type="radio" <?php checked($version, 'LTI-1p1'); ?> id="lti_content_field_version_1_1" name="lti_content_field_version" value="LTI-1p1" /></label><br>
-                    <label>1.0 <input type="radio" <?php checked($version, 'LTI-1p0'); ?> id="lti_content_field_version_1_0" name="lti_content_field_version" value="LTI-1p0"  /></label>
-                </td>
-            </tr>
-
-            <tr>
-                <th><label for="lti_content_field_instructor_user"><?php echo _e("Use this instructor user instead of the logged in user", 'lti-consumer'); ?></label></th>
-                <td>
-                    <select id="lti_content_field_instructor_user" name="lti_content_field_instructor_user">
-                        <option value="-1"></option>
-                        <?php
-                        foreach ($users as $user) {
-                            echo '<option  value="' . $user->id . '" ' . ($instructor_user == $user->id ? 'selected' : '') . ' >' . esc_html($user->display_name) . ' [' . esc_html($user->user_email) . ']</option >';
-                        }
-                        ?>
-                    </select >
-
-                </td>
-            </tr>
-
-            <tr>
-                <th><label for="lti_content_field_other_parameters"><?php echo _e('Add a JSON object of other parameters and values sample: {"key":"value","key2":"value2"} ', 'lti-consumer'); ?></label></th>
-                <td><textarea id="lti_content_field_other_parameters" name="lti_content_field_other_parameters" rows="5" cols="40"><?php echo esc_attr($other_parameters); ?></textarea></td>
-            </tr>
-        </tbody>
-    </table>
-
-    <?php
+    echo '<p>All of the following fields are optional, and can be overridden by specifying the corresponding parameters to the lti-launch shortcode.</p>';
+    include 'lti-launch-settings.php';
 }
 
 add_filter('the_content', 'Saltbox\sb_lti_content_include_launcher');
@@ -238,6 +373,7 @@ function sb_lti_content_save_post($post_id) {
     $return_url = esc_url_raw($_POST['lti_content_field_return_url']);
     $version = sanitize_text_field($_POST['lti_content_field_version']);
     $instructor_user = sanitize_text_field($_POST['lti_content_field_instructor_user']);
+    $institution_role = sanitize_text_field($_POST['lti_content_field_role']);
     $other_parameters = sanitize_textarea_field($_POST['lti_content_field_other_parameters']);
 
     // Update the meta field in the database.
@@ -250,6 +386,7 @@ function sb_lti_content_save_post($post_id) {
     update_post_meta($post_id, '_lti_meta_return_url', $return_url);
     update_post_meta($post_id, '_lti_meta_version', $version);
     update_post_meta($post_id, '_lti_meta_instructor_user', $instructor_user);
+    update_post_meta($post_id, '_lti_meta_roles', $institution_role);
     update_post_meta($post_id, '_lti_meta_other_parameters', $other_parameters);
 }
 
@@ -260,7 +397,10 @@ add_shortcode('lti-launch', 'Saltbox\sb_lti_launch_func');
 
 function sb_lti_launch_func($attrs) {
     $data = sb_lti_launch_process($attrs);
+    return sb_lti_launch($data);
+}
 
+function sb_lti_launch($data) {
     if (array_key_exists('error', $data)) {
         $html = '<div class="error"><p><strong>' . $data['error'] . '</strong></p></div>';
     } else {
@@ -294,9 +434,10 @@ function sb_lti_launch_func($attrs) {
                 do_action('lti_launch', $data['id']);
             }
         } else if ($data['action'] == 'link') {
-            $html .= '<a href="#" onclick="lti_consumer_launch(\'' . $id . '\')">Launch ' . $data['text'] . '</a>';
+            $html .= '<a style="cursor: pointer;" href="#" onclick="lti_consumer_launch(\'' . $id . '\')">Launch ' . $data['text'] . '</a>';
         } else {
-            $html .= '<button onclick="lti_consumer_launch(\'' . $id . '\')">Launch ' . $data['text'] . '</button>';
+            //$html .= '<button style="cursor: pointer;" onclick="lti_consumer_launch(\'' . $id . '\')">Launch ' . $data['text'] . '</button>';
+			 $html .= '<input type="submit" value= "Launch ' . $data['text'] . '" style="cursor: pointer;">';
         }
 
         $html .= '</form>';
@@ -396,8 +537,28 @@ function sb_add_resource_link_id_if_not_present($shortcode) {
         array_push($pieces, 'resource_link_id=' . uniqid());
     }
 
-    // recombine args
-    return '[' . implode(' ', $pieces) . ']';
+    $onsave = false;
+    foreach ($pieces as $piece) {
+        if (strpos(trim($piece), 'onsave=') === 0) {
+            $onsave = true;
+            break;
+        }
+    }
+
+      if ($onsave) {
+           return do_shortcode( '[' . implode(' ', $pieces) . ']');
+
+            // Replace the original shortcode with the rewritten one
+            $content = substr_replace(
+                    $content,
+                    $processed,
+                    strpos($content, $match),
+                    strlen($match));
+        }else{
+        // recombine args
+        return '[' . implode(' ', $pieces) . ']';
+        }
+
 }
 
 /*
@@ -405,8 +566,10 @@ function sb_add_resource_link_id_if_not_present($shortcode) {
  */
 
 function sb_extract_user_id($userId) {
-    // Find some relevant information about the current user, or the selected instructor user.
-    $current_user = isset($userId) && intval($userId) > 0 ? get_user_by('id', $userId) : wp_get_current_user();
+    $current_user = get_lti_wp_user($userId);
+    if ($current_user == null) {
+        return array('error' => 'You must be logged in to launch this content.');
+    }
 
     return array(
         'user_id' => $current_user->ID,
@@ -416,10 +579,35 @@ function sb_extract_user_id($userId) {
     );
 }
 
+// Find some relevant information about the current user, or the selected instructor user.
+function get_lti_wp_user($userId) {
+    if (isset($userId) && intval($userId) > 0) {
+        return get_user_by('id', $userId);
+    } else if (is_user_logged_in()) {
+        return wp_get_current_user();
+    } else {
+        $postBody = file_get_contents("php://input");
+        $body = json_decode($postBody, true);
+        if (!empty($body['token'])) {
+            $token = $body['token'];
+            $user = apply_filters('vibebp_api_get_user_from_token', '', $token);
+            $user_id = $user->id;
+            if (!empty($user_id)) {
+                return get_user_by('id', $user_id);
+            }
+        }
+    }
+    return null;
+}
+
 function sb_extract_site_id() {
     // Find some relevant information about the site
+    $context_id = basename(get_permalink());
+    if (empty($context_id)) {
+        $context_id = 'app';
+    }
     return array(
-        'context_id' => basename(get_permalink()),
+        'context_id' => $context_id,
         'tool_consumer_instance_url' => get_site_url(),
     );
 }
@@ -459,8 +647,8 @@ function sb_determine_launch_url($configuration_url) {
 }
 
 function sb_lti_launch_process($attrs) {
-    // Reject launch for non-logged in users
-    if (!is_user_logged_in()) {
+    // Reject launch for non-logged in users    
+    if (get_lti_wp_user(null) == null) {
         return array('error' => 'You must be logged in to launch this content.');
     } else {
         $instructor_user = -1;
@@ -478,7 +666,6 @@ function sb_lti_launch_process($attrs) {
                 'post_status' => 'publish',
                 'posts_per_page' => 1,
             ));
-
             if ($posts) {
                 $lti_content = $posts[0];
                 $post_id = $lti_content->ID;
@@ -495,6 +682,7 @@ function sb_lti_launch_process($attrs) {
                 $text = $lti_content->post_title;
                 $version = get_post_meta($lti_content->ID, '_lti_meta_version', true) or 'LTI-1p1';
                 $instructor_user = intval(get_post_meta($lti_content->ID, '_lti_meta_instructor_user', true));
+                $institution_role = get_post_meta($lti_content->ID, '_lti_meta_roles', true);
                 $other_parameters = get_post_meta($lti_content->ID, '_lti_meta_other_parameters', true);
             }
         }
@@ -512,6 +700,12 @@ function sb_lti_launch_process($attrs) {
             $parameters['launch_presentation_return_url'] = $attrs['return_url'];
         } else if (isset($return_url) && $return_url) {
             $parameters['launch_presentation_return_url'] = $return_url;
+        }
+
+        if (array_key_exists('roles', $attrs)) {
+            $parameters['roles'] = $attrs['roles'];
+        } else if (isset($institution_role) && $institution_role) {
+            $parameters['roles'] = $institution_role;
         }
 
         if (array_key_exists('version', $attrs)) {

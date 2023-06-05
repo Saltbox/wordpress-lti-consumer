@@ -1,4 +1,4 @@
-An LTI-compatible launching plugin for Wordpress.
+An LTI-compatible launching plugin for Wordpress, updated to work with https://www.cengage.uk/
 
 General Wordpress plugin installation instructions can be found here: http://codex.wordpress.org/Managing_Plugins#Automatic_Plugin_Installation
 
